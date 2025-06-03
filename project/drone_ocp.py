@@ -10,9 +10,9 @@ import casadi as ca
 
 #################  AGGIUSTARE: ricavare snap, jerk, acc in qualche modo perché da y_expr non si può tramite get(...)
 ##############  Estendere lo stato con tutti gli stati
-
-
 ##############  Assegnare all'oggetto la traiettoria desiderata e mettere nei vincoli lo stare ad una certa distanza
+
+
 ##############  Includere vincoli visuali
 
 def setup_model():
@@ -97,6 +97,7 @@ def configure_ocp(model, x0, p_refs, rpy_refs, Tf, ts, W, W_e, radius=2.0):  # a
     # Acceleration (is part of xdot)
     a_expr = xdot[3:6]
 
+############################################################################################à
     # Jerk = symbolic time derivative of acceleration (d/dt(a)= d/dx(a)*xdot + d/du(a)*u)
     j_expr = ca.jacobian(a_expr, model.x) @ xdot + ca.jacobian(a_expr, model.u) @ model.u
 
@@ -276,10 +277,10 @@ def main():
     p_refs, rpy_refs = drone_ref_from_obj(p_obj,rpy_obj,radius)
 
     # Cost weights
-    W_x = np.diag([10, 10, 10, 1, 1, 1, 10, 10, 10, 1, 1, 1])   #variables in drone model (p,v,rpy,w)
+    W_x = np.diag([10, 10, 10, 5, 5, 5, 10, 10, 10, 1, 1, 1])   #variables in drone model (p,v,rpy,w)
     W_a = np.diag([1, 1, 1])        #accel
     W_j = np.diag([0.1, 0.1, 0.1])        #jerk
-    W_s = np.diag([0.1, 0.1, 0.1])        #snap
+    W_s = np.diag([1, 1, 1])        #snap
     W_u = np.diag([1,1,1,1,1,1])    #control
     W_e = ca.diagcat(W_x,W_a,W_j,W_s).full()
     W = ca.diagcat(W_x,W_a,W_j,W_s, W_u).full()
@@ -325,7 +326,7 @@ def main():
         ]
 
     # Animated Plot
-    traj_plot3D_animated(traj_time,p_refs, p_obj, p, labels=['Ref Drone', 'Ref Oggetto', 'Drone'], colors=['blue', 'red','green'])
+    traj_plot3D_animated(traj_time,p_refs, p_obj, p, labels=['Drone Reference', 'Object Trajectory', 'Drone Trajectory'], colors=['blue', 'red','green'])
 
     #Error norm - plot
     myPlotWithReference(traj_time, np.zeros((err_pos_norm.shape)), err_pos_norm, other_labels[0],"Norm of tracking error", 2)
