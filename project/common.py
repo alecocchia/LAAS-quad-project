@@ -266,8 +266,11 @@ def myPlotWithReference(time, ref, sim, labels, title, ncols=2):
         "font.family": "serif"
     })
 
-    n = ref.shape[1]
-
+    if (np.ndim(ref) > 1) :
+        n = ref.shape[1]
+    else :
+        n=1
+    
     if n == 1:
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(time, ref[:, 0], 'r--', label='Reference')
