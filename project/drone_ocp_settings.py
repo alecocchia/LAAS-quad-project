@@ -43,7 +43,7 @@ def setup_initial_conditions() :
 
 
 def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
-    #model dimension
+    #model dimensions
     # model.x = [p(3), v(3), quat(4), omega(3)]
     # u = [f(3), tau(3)]
     nx = model.x.rows()
@@ -119,15 +119,32 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     j_hover = ca.substitute(j_expr, model.u, u_hovering)
     s_hover = ca.substitute(s_expr, model.u, u_hovering)
 
+    ############## REFERENCES
     #importing references as sym from model, for y_expr    
+    #POSITION
     p_ref_sym=model.p[0:3]
+    p_rel_sym = p_expr - p_ref_sym
+    r_expr = ca.norm_2(p_rel_sym)
+    pan_expr = ca.arctan2(p_rel_sym[0], p_rel_sym[1])   #polar angle
+    tilt_expr = ca.arcsin(p_rel_sym[2]/r_expr)          #azimuth angle
+    dist_drone_obj= p_expr[0]-p_ref_sym[0]
+
+    #ORIENTATION
     rpy_ref_sym=model.p[3:]
-    dist_drone_obj=ca.norm_2(p_expr-p_ref_sym)**2
+    R_obj = RPY_to_R(rpy_ref_sym[0],rpy_ref_sym[1],rpy_ref_sym[2])
+    R_drone = RPY_to_R(rpy_expr[0], rpy_expr[1], rpy_expr[2])
+    mutual_R = R_drone.T * R_obj
+    mutual_rot = R_to_RPY(mutual_R)
+    
+    rpy_dist = rpy_expr[0]-rpy_ref_sym[0]
+
     # Const function quantities (expressed with respect to state and control)
     y_expr = ca.vertcat(
-        dist_drone_obj,        #(||p-p_ref||-radius)^2
+        r_expr,
+        pan_expr,
+        tilt_expr,
         v_expr,                         # velocity
-        ca.norm_2(rpy_expr[0]-rpy_ref_sym[0]),    
+        *mutual_rot,
         dot_rpy,                        # Euler rates
         a_expr,                         # acceleration
         j_expr,                         # jerk
@@ -136,9 +153,11 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     )
     # Last time instant expression (senza model.u)
     y_expr_e = ca.vertcat(
-        dist_drone_obj,        # ||p-p_ref||
+        r_expr,
+        pan_expr,
+        tilt_expr,
         v_expr,                         # velocity
-        ca.norm_2(rpy_expr[0]-rpy_ref_sym[0]),        
+        *mutual_rot,
         dot_rpy,                        # Euler rates
         a_hover,                        # acceleration
         j_hover,                        # jerk
@@ -154,11 +173,19 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     # Weigths over prediction horizon and last time istant
     ocp.cost.W = W
     ocp.cost.W_e = W_e
+    # initial values of parametes (p_obj,rpy_obj) (they will be updated at each iteration )
+    ocp.parameter_values = np.concatenate([p_obj[0,:],rpy_obj[0,:]])  
 
     #############       REFERENCES
 
-    p_ref=np.array([radius**2])
-    rpy_ref=0.0
+    r_ref = radius
+    pan_ref = 0.0
+    tilt_ref = 0.0
+
+    final_ref = np.array([radius, 0, 0])
+
+
+    rpy_ref = np.array([0.0, 0.0, 0.0])
     dot_rpy_ref = np.array([0,0,0])
     v_ref=np.array([0,0,0])
     acc_ref=np.array([0,0,0])
@@ -166,10 +193,13 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     snap_ref=np.array([0,0,0])
     u_ref=np.zeros(nu)
 
-    dist_pos_ind = 0
-    vel_ind = slice(1,4)
-    rpy_ind = 4
-    dot_rpy_ind = slice(rpy_ind+1,rpy_ind+4)
+    #dist_pos_ind = slice(0,3)
+    r_ind = 0
+    pan_ind = 1
+    tilt_ind = 2
+    vel_ind = slice(tilt_ind+1,tilt_ind + 4)
+    rpy_ind = slice(vel_ind.stop, vel_ind.stop+3)
+    dot_rpy_ind = slice(rpy_ind.stop,rpy_ind.stop+3)
     acc_ind = slice(dot_rpy_ind.stop,dot_rpy_ind.stop+3)
     jerk_ind = slice(acc_ind.stop,acc_ind.stop+3)
     snap_ind = slice(jerk_ind.stop,jerk_ind.stop+3)
@@ -181,7 +211,9 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     yref_e = np.zeros(y_expr_e.numel())
 
     # ASSIGN REFERENCES
-    yref[dist_pos_ind]=p_ref
+    yref[r_ind]= r_ref   #distance 
+    yref[pan_ind] = pan_ref
+    yref[tilt_ind] = tilt_ref
     yref[vel_ind]=v_ref
     yref[rpy_ind]=rpy_ref
     yref[dot_rpy_ind]=dot_rpy_ref
@@ -190,28 +222,19 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     yref[snap_ind]=snap_ref
     yref[u_ind]=u_ref
 
-    yref_e[dist_pos_ind]=p_ref
-    yref_e[vel_ind]=v_ref
-    yref_e[rpy_ind]=rpy_ref
-    yref_e[dot_rpy_ind]=dot_rpy_ref
-    yref_e[acc_ind]=acc_ref
-    yref_e[jerk_ind]=jerk_ref
-    yref_e[snap_ind]=snap_ref
+    #for last tract of trajectoy (task)
+    new_ref = np.concatenate([final_ref,yref[vel_ind.start:]])
+
+    #Terminal reference
+    yref_e = new_ref[:yref_e.shape[0]]
 
     ocp.cost.yref = yref
     ocp.cost.yref_e = yref_e
 
-    ocp.parameter_values = np.concatenate([p_obj[0,:],rpy_obj[0,:]])  # initial values of parametes (p_obj,rpy_obj) 
-                                        # they will be updated at each iteration 
-
     #solver creation
-    ocp.solver_options.nlp_solver_max_iter=500
+    ocp.solver_options.nlp_solver_max_iter=300
     ocp_solver = AcadosOcpSolver(ocp)
 
-    
-    # For now it is almost useless to have time varying reference, since radius is 
-    # constant and there are no time varying references on velocity, acceleration,jerk and snap. 
-    # It is useful ony for RPY angles for now.
 
     # Definition of cost references (ocp_solver.yref) and substituting pos and ang reference values from sym to real
     for i in range(N_horiz):
@@ -219,7 +242,11 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
         ocp_solver.set(i,"p",param)
         #yref_i = np.concatenate([p_ref_i, v_ref_i, rpy_ref_i, dot_rpy_ref_i, a_ref_i, j_ref_i, s_ref_i, np.zeros(nu)])
         #yref_i=np.concatenate([p_ref, np.zeros(nu)])
+        if (i>0.7*N_horiz):
+            ocp_solver.set(i,"yref", new_ref)
     ocp_solver.set(N_horiz,"p",param)
+    ocp_solver.set(N_horiz,"yref", new_ref[:yref_e.shape[0]])
+
     #x_ref_final = np.concatenate([p_ref_i, v_ref_i, rpy_ref_i, dot_rpy_ref_i ,a_ref_i,j_ref_i, s_ref_i])
     #x_ref_final = np.array(p_ref)
 

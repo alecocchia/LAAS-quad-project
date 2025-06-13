@@ -169,6 +169,16 @@ int quadrotor_ode_acados_sim_create(quadrotor_ode_sim_solver_capsule * capsule)
     capsule->acados_sim_solver = quadrotor_ode_sim_solver;
 
 
+    /* initialize parameter values */
+    double* p = calloc(np, sizeof(double));
+    
+    p[0] = 1;
+    p[1] = 1;
+    p[2] = 1;
+
+    quadrotor_ode_acados_sim_update_params(capsule, p, np);
+    free(p);
+
 
     /* initialize input */
     // x

@@ -9,6 +9,7 @@ from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 from acados_template import latexify_plot
 
+from scipy.linalg import solve_continuous_are
 
 from numpy.linalg import matrix_rank
 from scipy.linalg import eigvals
@@ -44,6 +45,18 @@ def RPY_to_R(roll, pitch, yaw):
         ca.horzcat(-sp,     cp * sr,                cp * cr)
     )
     return R
+
+#Da mat di rotazione a rpy
+def R_to_RPY(R):
+    """
+    Estrae roll, pitch, yaw da una matrice di rotazione R (CasADi SX/MX)
+    Restituisce (roll, pitch, yaw)
+    """
+    pitch = -ca.asin(R[2, 0])
+    roll  = ca.atan2(R[2, 1], R[2, 2])
+    yaw   = ca.atan2(R[1, 0], R[0, 0])
+    return roll, pitch, yaw
+
 
 
 # Da quaternion a matrice di rotazione
@@ -206,6 +219,38 @@ def check_stabilizzability(A, B):
 
     return check
 
+def compute_terminal_cost_P(model, x_eq, u_eq, Q, R):
+    """
+    Calcola la matrice P del costo terminale risolvendo l'ARE continua linearizzando il modello ACADOS.
+
+    Parameters:
+    - model: modello ACADOS con attributi x, u, f_expl_expr (CasADi SX)
+    - x_eq: punto di equilibrio stato (numpy array)
+    - u_eq: punto di equilibrio input (numpy array)
+    - Q, R: matrici di costo quadratiche (numpy array)
+
+    Returns:
+    - P: matrice del costo terminale (numpy array)
+    """
+
+    x = model.x
+    u = model.u
+    f = model.f_expl_expr
+
+    # Jacobiane
+    A_sym = ca.jacobian(f, x)
+    B_sym = ca.jacobian(f, u)
+
+    A_fun = ca.Function('A_fun', [x, u], [A_sym])
+    B_fun = ca.Function('B_fun', [x, u], [B_sym])
+
+    A = A_fun(x_eq, u_eq).full()
+    B = B_fun(x_eq, u_eq).full()
+
+    # Risolvo l'ARE continua
+    P = solve_continuous_are(A, B, Q, R)
+
+    return P
 
 
 #def plot_drone(time, X, U, latexify=False, plt_show=True, time_label='$t$', x_labels=None, u_labels=None):

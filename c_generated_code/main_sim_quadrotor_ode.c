@@ -103,6 +103,17 @@ int main()
     u0[3] = 0.0;
     u0[4] = 0.0;
     u0[5] = 0.0;
+    // set parameters
+    double p[NP];
+    p[0] = 1;
+    p[1] = 1;
+    p[2] = 1;
+    p[3] = 0;
+    p[4] = 0;
+    p[5] = 0;
+
+    quadrotor_ode_acados_sim_update_params(capsule, p, NP);
+  
 
   
 

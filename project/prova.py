@@ -1,4 +1,6 @@
 import numpy as np
 import casadi as ca
 
-ind=slice(2,4)
+vettore=np.array([0, 1, 2, 3])
+print(vettore.shape[0])
+

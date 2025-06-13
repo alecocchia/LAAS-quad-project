@@ -1,6 +1,9 @@
 #                MAIN
 from drone_ocp_settings import *
 
+ ###### RIPARTIRE DA: CAPIRE COME AFFRONTARE IL PROBLEMA DELLA BEST VIEW: VINCOLARE 
+ # TUTTE LE COMPONENTI DELLA POSIZIONE?
+
 def main():
     # Time
     t0 = 0.0
@@ -19,36 +22,35 @@ def main():
     u_hover = np.concatenate([hover_thrust.full().flatten(), np.zeros(3)])
     
     #OBJECT reference trajectory specification
-    p_obj_in = np.array([1, 1 , 0])    
+    p_obj_in = np.array([1, 1 , 1])    
     p_obj_f =  np.array([10, 10, 10])
     rot_obj_in =np.array([0,0,0]) 
     rot_obj_f =np.array([0,0,0]) 
     ref_in  = np.concatenate([p_obj_in,rot_obj_in])
     ref_f   = np.concatenate([p_obj_f,rot_obj_f])
 
-    # Reference trajectory (orientation in RPY)
+    # Reference trajectory (Object) (orientation in RPY)
     traj_time, p_obj, rpy_obj = generate_trapezoidal_trajectory(ref_in, ref_f, t0, Tf, ts, v_max=1.0, a_max=1.0)
 
-    #Creation of Drone reference
-    radius=2
+    # Drone reference
+    radius = 2
     #p_refs, rpy_refs = drone_ref_from_obj(p_obj,rpy_obj,radius)
 
     # Cost weights
-    W_x = np.diag([10,          #p
-                    2, 2, 2,    #v
-                    1,            #roll
-                    0.1, 0.1, 0.1])   #euler_rates
-    W_a = np.diag([0.1, 0.1, 0.1])        #accel
-    W_j = np.diag([0.5, 0.5, 0.5])        #jerk
-    W_s = np.diag([0.5, 0.5, 0.5])        #snap
+    W_x = np.diag([1, 1, 1,        #r, pan, tilt
+                    0.7, 0.7, 0.7,    #v
+                    0.8, 0.8, 0.8,   #mutual_rot
+                    0.5, 0.5, 0.5])  #euler_rates
+    W_a = np.diag([0.8]*3)        #accel
+    W_j = np.diag([0.5]*3)        #jerk
+    W_s = np.diag([0.5]*3)        #snap
     W_u = np.diag([0.1]*6)    #control
 
 
     #W_e = ca.diagcat(W_x,W_a,W_j,W_s).full()
     #W = ca.diagcat(W_x,W_a,W_j,W_s, W_u).full()
     W   = ca.diagcat(W_x, W_a, W_j, W_s, W_u).full()
-
-    W_e = 20*ca.diagcat(W_x,W_a,W_j,W_s).full()
+    W_e = ca.diagcat(W_x,W_a,W_j,W_s).full()    
 
     # configuring and solving OCP
     ocp_solver, N_horiz, nx, nu = configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e,radius)
@@ -80,7 +82,7 @@ def main():
         jerk_norm[i] = np.linalg.norm(jerk[i])
         snap_norm[i] = np.linalg.norm(snap[i])
         err_pos_norm[i]  = np.linalg.norm(p_obj[i]-p[i])
-        err_or_norm[i]  =   np.linalg.norm(rpy_obj[i,0]-rpy[i,0])
+        err_or_norm[i]  =   np.linalg.norm(rpy_obj[i,0]-rpy[i,0])   #roll
 
 
     # Plot drone states and controls
