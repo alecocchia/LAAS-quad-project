@@ -34,8 +34,7 @@ def main():
 
     # Drone reference
     radius = 2
-    #p_refs, rpy_refs = drone_ref_from_obj(p_obj,rpy_obj,radius)
-    
+        
     #NORMALIZE WEIGTHS
     D = 10      #m
     PANTILT = pi #rad
@@ -46,12 +45,13 @@ def main():
     JERK = 20
     SNAP = 40
     U = 20      #N
+    ############### CAMBIARE U
     
 
-    Q_pos = np.diag([20 / (D**2), 20 / (PANTILT**2), 20 / (PANTILT**2)])
+    Q_pos = np.diag([30 / (D**2), 30 / (PANTILT**2), 30 / (PANTILT**2)])
     Q_vel = np.diag([5]*3)/V**2
-    Q_rot = np.diag([10]*3)/ANG**2
-    Q_ang_dot = np.diag([4]*3)/ANG_DOT**2
+    Q_rot = np.diag([20]*3)/ANG**2
+    Q_ang_dot = np.diag([3]*3)/ANG_DOT**2
     Q_acc = np.diag([3]*3)/ACC**2
     Q_jerk = np.diag([2]*3)/JERK**2
     Q_snap = np.diag([1.5]*3)/SNAP**2
@@ -92,8 +92,8 @@ def main():
     acc_norm    = np.zeros((N_horiz+1,1))
     jerk_norm   = np.zeros((N_horiz+1,1))
     snap_norm   = np.zeros((N_horiz+1,1))
-    err_pos_norm = np.zeros((N_horiz+1,1))
-    err_or_norm = np.zeros((N_horiz+1,1))
+    dist_norm = np.zeros((N_horiz+1,1))
+    #err_or_norm = np.zeros((N_horiz+1,1))
 
     #get norm of v,a,j,s and of error
     for i in range (N_horiz + 1) :
@@ -101,8 +101,8 @@ def main():
         acc_norm[i]  = np.linalg.norm(acc[i])
         jerk_norm[i] = np.linalg.norm(jerk[i])
         snap_norm[i] = np.linalg.norm(snap[i])
-        err_pos_norm[i]  = np.linalg.norm(p_obj[i]-p[i])
-        err_or_norm[i]  =   np.linalg.norm(rpy_obj[i,0]-rpy[i,0])   #roll
+        dist_norm[i]  = np.linalg.norm(p_obj[i]-p[i])
+        #err_or_norm[i]  =   np.linalg.norm(rpy_obj[i]-rpy[i])   #roll
 
 
     # Plot drone states and controls
@@ -117,18 +117,23 @@ def main():
         ]
     
     #constant reference array
-    radius_array=np.repeat(radius,len(traj_time)).reshape(-1,1)
-
+    dist1=np.repeat(radius,len(traj_time)).reshape(-1,1)
+    dist2 = np.repeat(radius+2, len(traj_time)).reshape(-1,1)
+    
+    #conversion of orientation in degrees
+    drone_rpy_deg = np.vstack([np.rad2deg(rpy[:,0]), np.rad2deg(rpy[:,1]), np.rad2deg(rpy[:,2])]).T
     # Animated Plot
     traj_plot3D_animated_with_orientation(traj_time,p, rpy, p_obj, rpy_obj)
     #Error norm - plot
-    myPlotWithReference(traj_time, radius_array, err_pos_norm, other_labels[0],"Distance of drone from object", 2)
-    myPlotWithReference(traj_time, np.zeros(len(traj_time)).reshape(-1,1), err_or_norm, other_labels[1],"Roll distance from ref value", 2)
+    myPlotWithReference(traj_time, [dist1,dist2], dist_norm, other_labels[0],"Distance of drone from object", 2)
+    #myPlotWithReference(traj_time, np.zeros(len(traj_time)).reshape(-1,1), err_or_norm, other_labels[1],"Roll distance from ref value", 2)
 
     #Velocity, acceleration, jerk, snap norms - plot
     myPlot(traj_time,np.hstack([vel_norm, acc_norm, jerk_norm, snap_norm]),other_labels[2:], "Norms of velocity, acceleration, jerk and snap",2)
     #States - plot
-    myPlotWithReference(traj_time, p_obj, x_rpy, model_rpy.x_labels, "States", 2)
+    myPlotWithReference(traj_time, [p_obj], p, model_rpy.x_labels[0:3], "Positions [m]", 2)
+    myPlotWithReference(traj_time, [], drone_rpy_deg , model_rpy.x_labels[6:9], "Orientations [deg]", 2)
+
     #Control input - plot
     myPlot(traj_time[0:-1], simU, model_rpy.u_labels, "Control laws", 2)
     

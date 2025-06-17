@@ -133,7 +133,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     rpy_ref_sym=model.p[3:]
     R_obj = RPY_to_R(rpy_ref_sym[0],rpy_ref_sym[1],rpy_ref_sym[2])
     R_drone = RPY_to_R(rpy_expr[0], rpy_expr[1], rpy_expr[2])
-    mutual_R = R_drone.T * R_obj
+    mutual_R = R_obj.T * R_drone
     mutual_rot = R_to_RPY(mutual_R)
     
     # Const function quantities (expressed with respect to state and control)
@@ -175,7 +175,8 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     ocp.parameter_values = np.concatenate([p_obj[0,:],rpy_obj[0,:]])  
 
     #############       REFERENCES
-
+    
+    # Before task
     r_ref = radius
     pan_ref = 0.0
     tilt_ref = 0.0
@@ -187,8 +188,8 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     snap_ref=np.array([0,0,0])
     u_ref=np.zeros(nu)
 
-    final_mut_pos = np.array([radius+2, 0, pi/4])
-    rpy_final_rot = np.array([pi, 0, pi])          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
+    final_mut_pos = np.array([radius+2, 0, pi/4])   # r pan e tilt
+    rpy_final_mut_rot = np.array([pi/6, 0, 0])          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
 
     #dist_pos_ind = slice(0,3)
     r_ind = 0
@@ -220,7 +221,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     yref[u_ind]=u_ref
 
     #for last tract of trajectoy (task)
-    new_ref = np.concatenate([final_mut_pos, v_ref, rpy_final_rot, yref[dot_rpy_ind.start:]])
+    new_ref = np.concatenate([final_mut_pos, v_ref, rpy_final_mut_rot, yref[dot_rpy_ind.start:]])
 
     #Terminal reference
     yref_e = new_ref[:yref_e.shape[0]]
@@ -237,9 +238,10 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     for i in range(N_horiz):
         param = np.concatenate([p_obj[i],rpy_obj[i]])
         ocp_solver.set(i,"p",param)
-        #yref_i = np.concatenate([p_ref_i, v_ref_i, rpy_ref_i, dot_rpy_ref_i, a_ref_i, j_ref_i, s_ref_i, np.zeros(nu)])
-        #yref_i=np.concatenate([p_ref, np.zeros(nu)])
+
         if (i>0.7*N_horiz):
+            #param = np.concatenate([final_mut_pos,rpy_final_mut_rot])
+            #ocp_solver.set(i,"p",param)
             ocp_solver.set(i,"yref", new_ref)
     ocp_solver.set(N_horiz,"p",param)
     ocp_solver.set(N_horiz,"yref", new_ref[:yref_e.shape[0]])

@@ -26,11 +26,6 @@ m   = 1.            # [kg] mass
 Ixx, Iyy, Izz = 0.015, 0.015, 0.007 #Inertia
 J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
 
-# RPY da matrice di rotazione
-def R2rpy(R_mat):
-    rpy = R.from_matrix(R_mat)
-    return rpy.as_euler('rpy', degrees=False)  # RPY = Roll (X), Pitch (Y), Yaw (Z)
-
 # Da angoli RPY a matrice di rotazione
 def RPY_to_R(roll, pitch, yaw):
     cr = ca.cos(roll)
@@ -304,23 +299,30 @@ def compute_terminal_cost_P(model, x_eq, u_eq, Q, R):
 #    if plt_show:
 #        plt.show()
 
-def myPlotWithReference(time, ref, sim, labels, title, ncols=2):
+def myPlotWithReference(time, refs, sim, labels, title, ncols=2):
     """
     Plotta confronto tra traiettorie di riferimento e simulate.
+
+    - refs: lista di array (ciascuno con shape (N,)) => più riferimenti
+    - sim: array (N, n) => simulazione
+    - labels: lista di etichette (n)
     """
     plt.rcParams.update({
         "text.usetex": True,
         "font.family": "serif"
     })
 
-    if (np.ndim(ref) > 1) :
-        n = ref.shape[1]
-    else :
-        n=1
-    
+    n_refs = len(refs)
+    if sim.ndim == 1:
+        sim = sim[:, np.newaxis]
+    n = sim.shape[1]  # numero variabili simulate
+
+    ref_colors = ['r', 'g', 'm', 'c']  # colori per più riferimenti
+
     if n == 1:
         fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(time, ref[:, 0], 'r--', label='Reference')
+        for j, ref in enumerate(refs):
+            ax.plot(time, ref, '--', color=ref_colors[j % len(ref_colors)], label=f"Ref {j+1}")
         ax.plot(time, sim[:, 0], 'b-', label='Simulation')
         ax.set_title(rf"${labels[0]}$", fontsize=12)
         ax.set_xlabel(r"Time [s]")
@@ -332,7 +334,8 @@ def myPlotWithReference(time, ref, sim, labels, title, ncols=2):
         fig, axes = plt.subplots(nrows, ncols, figsize=(10, 4 * nrows))
         axes = axes.flatten()
         for i in range(n):
-            axes[i].plot(time, ref[:, i], 'r--', label='Reference')
+            for j, ref in enumerate(refs):
+                axes[i].plot(time, ref[:, i], '--', color=ref_colors[j % len(ref_colors)], label=f"Ref {j+1}")
             axes[i].plot(time, sim[:, i], 'b-', label='Simulation')
             axes[i].set_title(rf"${labels[i]}$", fontsize=12)
             axes[i].set_xlabel(r"Time [s]")
@@ -345,6 +348,8 @@ def myPlotWithReference(time, ref, sim, labels, title, ncols=2):
     fig.suptitle(rf"\textbf{{{title}}}", fontsize=16)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
+
+
 
 def myPlot(time, sim, labels, title, ncols=2):
     """
@@ -433,9 +438,9 @@ def traj_plot3D_animated_with_orientation(t, drone_pos, drone_rot, obj_pos, obj_
     Parametri:
     - t: array tempi (N,)
     - drone_pos: (N,3) posizioni drone
-    - drone_rot: (N,3,3) matrici rotazione drone (ogni R[i] colonna = asse X,Y,Z)
+    - drone_rot: (N,3) RPY drone
     - obj_pos: (N,3) posizioni oggetto
-    - obj_rot: (N,3,3) matrici rotazione oggetto
+    - obj_rot: (N,3) RPY oggetto
     - interval: intervallo animazione [ms]
     - step: passo frame
     """
@@ -493,7 +498,7 @@ def traj_plot3D_animated_with_orientation(t, drone_pos, drone_rot, obj_pos, obj_
 
         # Aggiorna assi oggetto
         origin = obj_pos[i]
-        R = RPY_to_R(obj_rot[i,0],obj_rot[i,1],obj_rot[i,1]).full()
+        R = RPY_to_R(obj_rot[i,0],obj_rot[i,1],obj_rot[i,2]).full()
         for idx, line in enumerate(obj_axes_lines):
             start, end = plot_axes(origin, R, length=1)[idx]
             line.set_data([start[0], end[0]], [start[1], end[1]])
