@@ -6,12 +6,15 @@ import os
 from pathlib import Path
 from typing import Union
 from scipy.spatial.transform import Rotation as R
-import matplotlib.pyplot as plt
-from acados_template import latexify_plot
-
+from scipy.linalg import solve_continuous_are
 
 from numpy.linalg import matrix_rank
 from scipy.linalg import eigvals
+
+import matplotlib.pyplot as plt
+from acados_template import latexify_plot
+from matplotlib.animation import FuncAnimation
+from mpl_toolkits.mplot3d import Axes3D
 
 
 
@@ -44,6 +47,18 @@ def RPY_to_R(roll, pitch, yaw):
         ca.horzcat(-sp,     cp * sr,                cp * cr)
     )
     return R
+
+#Da mat di rotazione a rpy
+def R_to_RPY(R):
+    """
+    Estrae roll, pitch, yaw da una matrice di rotazione R (CasADi SX/MX)
+    Restituisce (roll, pitch, yaw)
+    """
+    pitch = -ca.asin(R[2, 0])
+    roll  = ca.atan2(R[2, 1], R[2, 2])
+    yaw   = ca.atan2(R[1, 0], R[0, 0])
+    return roll, pitch, yaw
+
 
 
 # Da quaternion a matrice di rotazione
@@ -206,6 +221,38 @@ def check_stabilizzability(A, B):
 
     return check
 
+def compute_terminal_cost_P(model, x_eq, u_eq, Q, R):
+    """
+    Calcola la matrice P del costo terminale risolvendo l'ARE continua linearizzando il modello ACADOS.
+
+    Parameters:
+    - model: modello ACADOS con attributi x, u, f_expl_expr (CasADi SX)
+    - x_eq: punto di equilibrio stato (numpy array)
+    - u_eq: punto di equilibrio input (numpy array)
+    - Q, R: matrici di costo quadratiche (numpy array)
+
+    Returns:
+    - P: matrice del costo terminale (numpy array)
+    """
+
+    x = model.x
+    u = model.u
+    f = model.f_expl_expr
+
+    # Jacobiane
+    A_sym = ca.jacobian(f, x)
+    B_sym = ca.jacobian(f, u)
+
+    A_fun = ca.Function('A_fun', [x, u], [A_sym])
+    B_fun = ca.Function('B_fun', [x, u], [B_sym])
+
+    A = A_fun(x_eq, u_eq).full()
+    B = B_fun(x_eq, u_eq).full()
+
+    # Risolvo l'ARE continua
+    P = solve_continuous_are(A, B, Q, R)
+
+    return P
 
 
 #def plot_drone(time, X, U, latexify=False, plt_show=True, time_label='$t$', x_labels=None, u_labels=None):
@@ -266,8 +313,11 @@ def myPlotWithReference(time, ref, sim, labels, title, ncols=2):
         "font.family": "serif"
     })
 
-    n = ref.shape[1]
-
+    if (np.ndim(ref) > 1) :
+        n = ref.shape[1]
+    else :
+        n=1
+    
     if n == 1:
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(time, ref[:, 0], 'r--', label='Reference')
@@ -331,4 +381,129 @@ def myPlot(time, sim, labels, title, ncols=2):
 
     fig.suptitle(rf"\textbf{{{title}}}", fontsize=16)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.show()
+
+
+#def traj_plot3D_animated(t, *trajs, labels=None, colors=None, interval=30, step=2):
+#    fig = plt.figure()
+#    ax = fig.add_subplot(111, projection='3d')
+#
+#    num_trajs = len(trajs)
+#    if labels is None:
+#        labels = [f'Trajectory {i+1}' for i in range(num_trajs)]
+#    if colors is None:
+#        colors = ['C'+str(i) for i in range(num_trajs)]
+#
+#    # Inizializza linee vuote
+#    lines = []
+#    for label, color in zip(labels, colors):
+#        line, = ax.plot([], [], [], color=color, label=label, linewidth=2)
+#        lines.append(line)
+#
+#    # Calcola limiti globali
+#    all_xyz = np.concatenate(trajs, axis=0)
+#    ax.set_xlim(np.min(all_xyz[:, 0]), np.max(all_xyz[:, 0]))
+#    ax.set_ylim(np.min(all_xyz[:, 1]), np.max(all_xyz[:, 1]))
+#    ax.set_zlim(np.min(all_xyz[:, 2]), np.max(all_xyz[:, 2]))
+#
+#    ax.set_xlabel('X')
+#    ax.set_ylabel('Y')
+#    ax.set_zlabel('Z')
+#    ax.set_title('Animazione traiettorie 3D')
+#    ax.legend()
+#
+#    def update(frame):
+#        i = frame * step
+#        i = min(i, len(t) - 1)
+#        for line, traj in zip(lines, trajs):
+#            line.set_data(traj[:i+1, 0], traj[:i+1, 1])
+#            line.set_3d_properties(traj[:i+1, 2])
+#        return lines
+#
+#    n_frames = len(t) // step + 1
+#    ani = FuncAnimation(fig, update, frames=n_frames, interval=interval, blit=False)
+#
+#    plt.tight_layout()
+#    plt.show()
+
+def traj_plot3D_animated_with_orientation(t, drone_pos, drone_rot, obj_pos, obj_rot, interval=30, step=2):
+    """
+    Animazione 3D delle traiettorie di drone e oggetto, con assi di orientamento.
+
+    Parametri:
+    - t: array tempi (N,)
+    - drone_pos: (N,3) posizioni drone
+    - drone_rot: (N,3,3) matrici rotazione drone (ogni R[i] colonna = asse X,Y,Z)
+    - obj_pos: (N,3) posizioni oggetto
+    - obj_rot: (N,3,3) matrici rotazione oggetto
+    - interval: intervallo animazione [ms]
+    - step: passo frame
+    """
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Limiti globali per tutti i dati
+    all_pos = np.vstack([drone_pos, obj_pos])
+    ax.set_xlim(np.min(all_pos[:, 0]), np.max(all_pos[:, 0]))
+    ax.set_ylim(np.min(all_pos[:, 1]), np.max(all_pos[:, 1]))
+    ax.set_zlim(np.min(all_pos[:, 2]), np.max(all_pos[:, 2]))
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('Animazione con orientamento')
+    ax.legend()
+
+    # Linee traiettorie
+    drone_line, = ax.plot([], [], [], 'r-', label='Drone Trajectory', linewidth=2)
+    obj_line, = ax.plot([], [], [], 'b-', label='Object Trajectory', linewidth=2)
+
+    # Linee per assi (3 per drone + 3 per oggetto)
+    drone_axes_lines = [ax.plot([], [], [], color=c)[0] for c in ['r', 'g', 'b']]
+    obj_axes_lines = [ax.plot([], [], [], color=c)[0] for c in ['r', 'g', 'b']]
+
+    ax.legend()
+
+    def plot_axes(origin, R, length=0.5):
+        """
+        Restituisce liste di punti per ogni asse da disegnare.
+        """
+        ends = origin[:,None] + R * length  # broadcasting: (3,3) * scalar
+        # ends shape (3,3) = 3 vettori asse, colonne: assi X,Y,Z
+        return [(origin, ends[:, i]) for i in range(3)]
+
+    def update(frame):
+        i = min(frame * step, len(t) - 1)
+
+        # Aggiorna traiettorie
+        drone_line.set_data(drone_pos[:i + 1, 0], drone_pos[:i + 1, 1])
+        drone_line.set_3d_properties(drone_pos[:i + 1, 2])
+
+        obj_line.set_data(obj_pos[:i + 1, 0], obj_pos[:i + 1, 1])
+        obj_line.set_3d_properties(obj_pos[:i + 1, 2])
+
+        # Aggiorna assi drone
+        origin = drone_pos[i]
+        R = RPY_to_R(drone_rot[i,0],drone_rot[i,1],drone_rot[i,2]).full()
+        for idx, line in enumerate(drone_axes_lines):
+            start, end = plot_axes(origin, R, length=1)[idx]
+            line.set_data([start[0], end[0]], [start[1], end[1]])
+            line.set_3d_properties([start[2], end[2]])
+
+        # Aggiorna assi oggetto
+        origin = obj_pos[i]
+        R = RPY_to_R(obj_rot[i,0],obj_rot[i,1],obj_rot[i,1]).full()
+        for idx, line in enumerate(obj_axes_lines):
+            start, end = plot_axes(origin, R, length=1)[idx]
+            line.set_data([start[0], end[0]], [start[1], end[1]])
+            line.set_3d_properties([start[2], end[2]])
+
+        # Ritorna linee per aggiornamento
+        return [drone_line, obj_line] + drone_axes_lines + obj_axes_lines
+
+    n_frames = len(t) // step + 1
+    ani = FuncAnimation(fig, update, frames=n_frames, interval=interval, blit=False)
+
+    plt.tight_layout()
     plt.show()

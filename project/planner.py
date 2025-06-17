@@ -3,10 +3,6 @@ import casadi as ca
 import numpy as np
 
 
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from mpl_toolkits.mplot3d import Axes3D
-
 def generate_trapezoidal_trajectory(x0, x_ref, t0, tf, dt, v_max=1.0, a_max=1.0):
     """
     Genera una traiettoria p(t), rpy(t) con profilo trapezoidale lungo p_f - p_in e interpolazione lineare in rpy.
@@ -81,47 +77,4 @@ def generate_trapezoidal_trajectory(x0, x_ref, t0, tf, dt, v_max=1.0, a_max=1.0)
     rpy_vals = np.array([rpy_func(t).full().flatten() for t in t_vec])
     return (t_vec, p_vals, rpy_vals)
 
-
-
-def traj_plot3D_animated(t, *trajs, labels=None, colors=None, interval=30, step=2):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    num_trajs = len(trajs)
-    if labels is None:
-        labels = [f'Trajectory {i+1}' for i in range(num_trajs)]
-    if colors is None:
-        colors = ['C'+str(i) for i in range(num_trajs)]
-
-    # Inizializza linee vuote
-    lines = []
-    for label, color in zip(labels, colors):
-        line, = ax.plot([], [], [], color=color, label=label, linewidth=2)
-        lines.append(line)
-
-    # Calcola limiti globali
-    all_xyz = np.concatenate(trajs, axis=0)
-    ax.set_xlim(np.min(all_xyz[:, 0]), np.max(all_xyz[:, 0]))
-    ax.set_ylim(np.min(all_xyz[:, 1]), np.max(all_xyz[:, 1]))
-    ax.set_zlim(np.min(all_xyz[:, 2]), np.max(all_xyz[:, 2]))
-
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title('Animazione traiettorie 3D')
-    ax.legend()
-
-    def update(frame):
-        i = frame * step
-        i = min(i, len(t) - 1)
-        for line, traj in zip(lines, trajs):
-            line.set_data(traj[:i+1, 0], traj[:i+1, 1])
-            line.set_3d_properties(traj[:i+1, 2])
-        return lines
-
-    n_frames = len(t) // step + 1
-    ani = FuncAnimation(fig, update, frames=n_frames, interval=interval, blit=False)
-
-    plt.tight_layout()
-    plt.show()
 
