@@ -67,12 +67,12 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     #initial conditions for constraints
     ocp.constraints.x0 = x0
     # State physical constraints
-    ocp.constraints.lbx = np.array([0] + [-2]*3 + [-np.deg2rad(60)]*3)
-    ocp.constraints.ubx = np.array([12] + [2]*3 + [np.deg2rad(60)]*3)
+    ocp.constraints.lbx = np.array([0] + [-5]*3 + [-np.deg2rad(60)]*3)
+    ocp.constraints.ubx = np.array([100] + [5]*3 + [np.deg2rad(60)]*3)
     ocp.constraints.idxbx = np.array([2, 3, 4, 5, 10, 11, 12])
     # Control constraints
-    Fmax = 20  #more or less double that hovering
-    Tmax = 1
+    Fmax = 40  #more or less 4 times than hovering
+    Tmax = 3
     ocp.constraints.lbu = np.array([-Fmax, -Fmax, -Fmax, -Tmax, -Tmax, -Tmax])
     ocp.constraints.ubu = np.array([Fmax, Fmax, Fmax, Tmax, Tmax, Tmax])
     ocp.constraints.idxbu = np.arange(nu)
@@ -188,9 +188,11 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     snap_ref=np.array([0,0,0])
     u_ref=np.zeros(nu)
 
-    final_mut_pos = np.array([radius+2, 0, pi/4])   # r pan e tilt
-    rpy_final_mut_rot = np.array([pi/6, 0, 0])          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
+    # Task 
+    final_mut_pos = np.array([radius+radius/2, pi/6, pi/4])   # r pan e tilt
+    rpy_final_mut_rot = np.array([0, 0, pi])          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
 
+    # Indexes
     #dist_pos_ind = slice(0,3)
     r_ind = 0
     pan_ind = 1
@@ -221,7 +223,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     yref[u_ind]=u_ref
 
     #for last tract of trajectoy (task)
-    new_ref = np.concatenate([final_mut_pos, v_ref, rpy_final_mut_rot, yref[dot_rpy_ind.start:]])
+    new_ref = np.concatenate([final_mut_pos, yref[vel_ind], rpy_final_mut_rot, yref[dot_rpy_ind.start:]])
 
     #Terminal reference
     yref_e = new_ref[:yref_e.shape[0]]

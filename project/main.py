@@ -22,7 +22,7 @@ def main():
     u_hover = np.concatenate([hover_thrust.full().flatten(), np.zeros(3)])
     
     #OBJECT reference trajectory specification
-    p_obj_in = np.array([6 , 6 , 0])    
+    p_obj_in = np.array([4 , 4 , 0])    
     p_obj_f =  np.array([10, 10, 10])
     rot_obj_in =np.array([0,0,0]) 
     rot_obj_f =np.array([0,0,0]) 
@@ -36,29 +36,29 @@ def main():
     radius = 2
         
     #NORMALIZE WEIGTHS
-    D = 10      #m
-    PANTILT = pi #rad
-    V = 5       #m/s
-    ANG = pi    #rad
-    ANG_DOT = pi
-    ACC = 10
-    JERK = 20
-    SNAP = 40
-    U = 20      #N
-    ############### CAMBIARE U
-    
+    D = 10          # m
+    PANTILT = 2*pi    # rad
+    V = 5           # m/s
+    ANG = 2*pi        # rad
+    ANG_DOT = pi/3   # rad/s
+    ACC = 6        # m/s^2
+    JERK = 20       # m/s^3
+    SNAP = 200       # m/s^4
+    U_F = 40        # N
+    U_TAU = 3       # N*m    
 
-    Q_pos = np.diag([30 / (D**2), 30 / (PANTILT**2), 30 / (PANTILT**2)])
-    Q_vel = np.diag([5]*3)/V**2
-    Q_rot = np.diag([20]*3)/ANG**2
-    Q_ang_dot = np.diag([3]*3)/ANG_DOT**2
-    Q_acc = np.diag([3]*3)/ACC**2
-    Q_jerk = np.diag([2]*3)/JERK**2
-    Q_snap = np.diag([1.5]*3)/SNAP**2
+    Q_pos = np.diag([5 / (D**2), 5 / (PANTILT**2), 5 / (PANTILT**2)])
+    Q_vel = np.diag([0.2]*3)/V**2
+    Q_rot = np.diag([10,10,20])/ANG**2
+    Q_ang_dot = np.diag([0.1,0.1,0.01])/ANG_DOT**2
+    Q_acc = np.diag([0.1]*3)/ACC**2
+    Q_jerk = np.diag([0.04]*3)/JERK**2
+    Q_snap = np.diag([0.03]*3)/SNAP**2
     
-    R = np.diag([0.1]*6)/U**2
+    R_f = np.diag([0.01]*3)/U_F*2
+    R_tau = np.diag([0.01,0.01,0.01])/U_TAU**2
+    R = ca.diagcat(R_f,R_tau)
     Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_jerk, Q_snap)
-
     # Cost weights
     #W_x = np.diag([ 50, 100, 100,        #r, pan, tilt
     #                wmax/10, wmax/10, wmax/10,    #v
@@ -70,7 +70,7 @@ def main():
     #W_u = np.diag([wmax/100]*6)/wmax    #control
 
     W   = diagcat(Q,R).full()
-    W_e = 10 * Q.full()    
+    W_e = 20 * Q.full()    
 
     # configuring and solving OCP
     ocp_solver, N_horiz, nx, nu = configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e,radius)
