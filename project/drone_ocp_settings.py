@@ -124,7 +124,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     #POSITION
     p_ref_sym=model.p[0:3]
     p_rel_sym = p_expr - p_ref_sym
-    r_expr = ca.norm_2(p_rel_sym)
+    r_expr = ca.norm_2(p_rel_sym)                       #radius
     pan_expr = ca.arctan2(p_rel_sym[0], p_rel_sym[1])   #polar angle
     tilt_expr = ca.arcsin(p_rel_sym[2]/r_expr)          #azimuth angle
     dist_drone_obj= p_expr[0]-p_ref_sym[0]
@@ -136,8 +136,6 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     mutual_R = R_drone.T * R_obj
     mutual_rot = R_to_RPY(mutual_R)
     
-    rpy_dist = rpy_expr[0]-rpy_ref_sym[0]
-
     # Const function quantities (expressed with respect to state and control)
     y_expr = ca.vertcat(
         r_expr,
@@ -181,17 +179,16 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     r_ref = radius
     pan_ref = 0.0
     tilt_ref = 0.0
-
-    final_ref = np.array([radius, 0, 0])
-
-
-    rpy_ref = np.array([0.0, 0.0, 0.0])
+    mutual_rot_ref = np.array([0.0, 0.0, 0.0])
     dot_rpy_ref = np.array([0,0,0])
     v_ref=np.array([0,0,0])
     acc_ref=np.array([0,0,0])
     jerk_ref=np.array([0,0,0])
     snap_ref=np.array([0,0,0])
     u_ref=np.zeros(nu)
+
+    final_mut_pos = np.array([radius+2, 0, pi/4])
+    rpy_final_rot = np.array([pi, 0, pi])          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
 
     #dist_pos_ind = slice(0,3)
     r_ind = 0
@@ -215,7 +212,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     yref[pan_ind] = pan_ref
     yref[tilt_ind] = tilt_ref
     yref[vel_ind]=v_ref
-    yref[rpy_ind]=rpy_ref
+    yref[rpy_ind]=mutual_rot_ref
     yref[dot_rpy_ind]=dot_rpy_ref
     yref[acc_ind]=acc_ref
     yref[jerk_ind]=jerk_ref
@@ -223,7 +220,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     yref[u_ind]=u_ref
 
     #for last tract of trajectoy (task)
-    new_ref = np.concatenate([final_ref,yref[vel_ind.start:]])
+    new_ref = np.concatenate([final_mut_pos, v_ref, rpy_final_rot, yref[dot_rpy_ind.start:]])
 
     #Terminal reference
     yref_e = new_ref[:yref_e.shape[0]]

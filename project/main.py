@@ -22,7 +22,7 @@ def main():
     u_hover = np.concatenate([hover_thrust.full().flatten(), np.zeros(3)])
     
     #OBJECT reference trajectory specification
-    p_obj_in = np.array([1, 1 , 1])    
+    p_obj_in = np.array([6 , 6 , 0])    
     p_obj_f =  np.array([10, 10, 10])
     rot_obj_in =np.array([0,0,0]) 
     rot_obj_f =np.array([0,0,0]) 
@@ -35,22 +35,42 @@ def main():
     # Drone reference
     radius = 2
     #p_refs, rpy_refs = drone_ref_from_obj(p_obj,rpy_obj,radius)
+    
+    #NORMALIZE WEIGTHS
+    D = 10      #m
+    PANTILT = pi #rad
+    V = 5       #m/s
+    ANG = pi    #rad
+    ANG_DOT = pi
+    ACC = 10
+    JERK = 20
+    SNAP = 40
+    U = 20      #N
+    
+
+    Q_pos = np.diag([20 / (D**2), 20 / (PANTILT**2), 20 / (PANTILT**2)])
+    Q_vel = np.diag([5]*3)/V**2
+    Q_rot = np.diag([10]*3)/ANG**2
+    Q_ang_dot = np.diag([4]*3)/ANG_DOT**2
+    Q_acc = np.diag([3]*3)/ACC**2
+    Q_jerk = np.diag([2]*3)/JERK**2
+    Q_snap = np.diag([1.5]*3)/SNAP**2
+    
+    R = np.diag([0.1]*6)/U**2
+    Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_jerk, Q_snap)
 
     # Cost weights
-    W_x = np.diag([1, 1, 1,        #r, pan, tilt
-                    0.7, 0.7, 0.7,    #v
-                    0.8, 0.8, 0.8,   #mutual_rot
-                    0.5, 0.5, 0.5])  #euler_rates
-    W_a = np.diag([0.8]*3)        #accel
-    W_j = np.diag([0.5]*3)        #jerk
-    W_s = np.diag([0.5]*3)        #snap
-    W_u = np.diag([0.1]*6)    #control
+    #W_x = np.diag([ 50, 100, 100,        #r, pan, tilt
+    #                wmax/10, wmax/10, wmax/10,    #v
+    #                wmax/5, wmax/5, wmax/5,   #mutual_rot
+    #                wmax/10, wmax/10, wmax/10])  #euler_rates
+    #W_a = np.diag([wmax/20]*3)/wmax        #accel
+    #W_j = np.diag([wmax/25]*3)/wmax        #jerk
+    #W_s = np.diag([wmax/30]*3)/wmax        #snap
+    #W_u = np.diag([wmax/100]*6)/wmax    #control
 
-
-    #W_e = ca.diagcat(W_x,W_a,W_j,W_s).full()
-    #W = ca.diagcat(W_x,W_a,W_j,W_s, W_u).full()
-    W   = ca.diagcat(W_x, W_a, W_j, W_s, W_u).full()
-    W_e = ca.diagcat(W_x,W_a,W_j,W_s).full()    
+    W   = diagcat(Q,R).full()
+    W_e = 10 * Q.full()    
 
     # configuring and solving OCP
     ocp_solver, N_horiz, nx, nu = configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e,radius)
@@ -100,7 +120,7 @@ def main():
     radius_array=np.repeat(radius,len(traj_time)).reshape(-1,1)
 
     # Animated Plot
-    traj_plot3D_animated(traj_time,p_obj, p, labels=['Ref object', 'Drone trajectory'], colors=['blue', 'red'])
+    traj_plot3D_animated_with_orientation(traj_time,p, rpy, p_obj, rpy_obj)
     #Error norm - plot
     myPlotWithReference(traj_time, radius_array, err_pos_norm, other_labels[0],"Distance of drone from object", 2)
     myPlotWithReference(traj_time, np.zeros(len(traj_time)).reshape(-1,1), err_or_norm, other_labels[1],"Roll distance from ref value", 2)
