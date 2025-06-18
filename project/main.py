@@ -49,14 +49,14 @@ def main():
 
     Q_pos = np.diag([5 / (D**2), 5 / (PANTILT**2), 5 / (PANTILT**2)])
     Q_vel = np.diag([0.2]*3)/V**2
-    Q_rot = np.diag([10,10,20])/ANG**2
-    Q_ang_dot = np.diag([0.1,0.1,0.01])/ANG_DOT**2
-    Q_acc = np.diag([0.1]*3)/ACC**2
-    Q_jerk = np.diag([0.04]*3)/JERK**2
-    Q_snap = np.diag([0.03]*3)/SNAP**2
+    Q_rot = np.diag([10,10,10])/ANG**2
+    Q_ang_dot = np.diag([1,1,1])/ANG_DOT**2
+    Q_acc = np.diag([0.08]*3)/ACC**2
+    Q_jerk = np.diag([0.05]*3)/JERK**2
+    Q_snap = np.diag([0.04]*3)/SNAP**2
     
-    R_f = np.diag([0.01]*3)/U_F*2
-    R_tau = np.diag([0.01,0.01,0.01])/U_TAU**2
+    R_f = np.diag([0.001]*3)/U_F*2
+    R_tau = np.diag([0.001]*3)/U_TAU**2
     R = ca.diagcat(R_f,R_tau)
     Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_jerk, Q_snap)
     # Cost weights
@@ -70,7 +70,7 @@ def main():
     #W_u = np.diag([wmax/100]*6)/wmax    #control
 
     W   = diagcat(Q,R).full()
-    W_e = 20 * Q.full()    
+    W_e = 10 * Q.full()    
 
     # configuring and solving OCP
     ocp_solver, N_horiz, nx, nu = configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e,radius)
@@ -121,7 +121,7 @@ def main():
     dist2 = np.repeat(radius+2, len(traj_time)).reshape(-1,1)
     
     #conversion of orientation in degrees
-    drone_rpy_deg = np.vstack([np.rad2deg(rpy[:,0]), np.rad2deg(rpy[:,1]), np.rad2deg(rpy[:,2])]).T
+    drone_rpy_deg = np.vstack([np.rad2deg(rpy[:,0]), np.rad2deg(rpy[:,1]), np.rad2deg(np.unwrap(rpy[:,2]))]).T
     # Animated Plot
     traj_plot3D_animated_with_orientation(traj_time,p, rpy, p_obj, rpy_obj)
     #Error norm - plot

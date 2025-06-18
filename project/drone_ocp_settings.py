@@ -30,7 +30,7 @@ def setup_initial_conditions() :
 
     roll=0
     pitch=0
-    yaw=0
+    yaw=-pi/3
     q = RPY_to_quat(roll,pitch,yaw)
 
     wx=0
@@ -43,33 +43,37 @@ def setup_initial_conditions() :
 
 
 def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
-    #model dimensions
+    
+    # model:
     # model.x = [p(3), v(3), quat(4), omega(3)]
     # u = [f(3), tau(3)]
+    # Dimensions
     nx = model.x.rows()
     nu = model.u.rows()
 
     #prediction horizon time
     N_horiz = int(Tf/ts)
 
-    #Optimization Control Problem creation
+    # creation of Optimization Control Problem
     ocp = AcadosOcp()
 
-    #model definition: it's handled as set of equality constraints
+    # model definition: it's handled as set of equality constraints
     ocp.model = model
     
-    #time: total simulation time and prediction horizon
+    # time: total simulation time and prediction horizon
     ocp.solver_options.tf = Tf
     ocp.solver_options.N_horizon = N_horiz
 
     ##########                          CONSTRAINTS             ################
 
-    #initial conditions for constraints
+    # initial conditions for constraints
     ocp.constraints.x0 = x0
     # State physical constraints
-    ocp.constraints.lbx = np.array([0] + [-5]*3 + [-np.deg2rad(60)]*3)
-    ocp.constraints.ubx = np.array([100] + [5]*3 + [np.deg2rad(60)]*3)
-    ocp.constraints.idxbx = np.array([2, 3, 4, 5, 10, 11, 12])
+    #ocp.constraints.lbx = np.array([0] + [-5]*3 + [-np.deg2rad(60)]*3)  
+    #ocp.constraints.ubx = np.array([100] + [5]*3 + [np.deg2rad(60)]*3)
+    ocp.constraints.lbx =  np.array(0)      # zmin
+    ocp.constraints.ubx =  np.array(100)    # zmax
+    ocp.constraints.idxbx = np.array([2])   # z index
     # Control constraints
     Fmax = 40  #more or less 4 times than hovering
     Tmax = 3
@@ -133,7 +137,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     rpy_ref_sym=model.p[3:]
     R_obj = RPY_to_R(rpy_ref_sym[0],rpy_ref_sym[1],rpy_ref_sym[2])
     R_drone = RPY_to_R(rpy_expr[0], rpy_expr[1], rpy_expr[2])
-    mutual_R = R_obj.T * R_drone
+    mutual_R = R_obj * R_drone.T
     mutual_rot = R_to_RPY(mutual_R)
     
     # Const function quantities (expressed with respect to state and control)
@@ -177,10 +181,8 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     #############       REFERENCES
     
     # Before task
-    r_ref = radius
-    pan_ref = 0.0
-    tilt_ref = 0.0
-    mutual_rot_ref = np.array([0.0, 0.0, 0.0])
+    mutual_pos_ref = np.array([radius, 0, 0])
+    mutual_rot_ref = np.array([0.0, 0.0, pi/2])
     dot_rpy_ref = np.array([0,0,0])
     v_ref=np.array([0,0,0])
     acc_ref=np.array([0,0,0])
@@ -193,11 +195,8 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     rpy_final_mut_rot = np.array([0, 0, pi])          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
 
     # Indexes
-    #dist_pos_ind = slice(0,3)
-    r_ind = 0
-    pan_ind = 1
-    tilt_ind = 2
-    vel_ind = slice(tilt_ind+1,tilt_ind + 4)
+    pos_ind = slice(0,3)
+    vel_ind = slice(pos_ind.stop,pos_ind.stop+3)
     rpy_ind = slice(vel_ind.stop, vel_ind.stop+3)
     dot_rpy_ind = slice(rpy_ind.stop,rpy_ind.stop+3)
     acc_ind = slice(dot_rpy_ind.stop,dot_rpy_ind.stop+3)
@@ -211,16 +210,14 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     yref_e = np.zeros(y_expr_e.numel())
 
     # ASSIGN REFERENCES
-    yref[r_ind]= r_ref   #distance 
-    yref[pan_ind] = pan_ref
-    yref[tilt_ind] = tilt_ref
-    yref[vel_ind]=v_ref
-    yref[rpy_ind]=mutual_rot_ref
-    yref[dot_rpy_ind]=dot_rpy_ref
-    yref[acc_ind]=acc_ref
-    yref[jerk_ind]=jerk_ref
-    yref[snap_ind]=snap_ref
-    yref[u_ind]=u_ref
+    yref[pos_ind]= mutual_pos_ref   # distance, pan and tilt
+    yref[vel_ind]=v_ref             # velocity
+    yref[rpy_ind]=mutual_rot_ref    # mutual rotation rpy
+    yref[dot_rpy_ind]=dot_rpy_ref   # Euler rates
+    yref[acc_ind]=acc_ref           # acceleration
+    yref[jerk_ind]=jerk_ref         # jerk
+    yref[snap_ind]=snap_ref         # snap
+    yref[u_ind]=u_ref               # control
 
     #for last tract of trajectoy (task)
     new_ref = np.concatenate([final_mut_pos, yref[vel_ind], rpy_final_mut_rot, yref[dot_rpy_ind.start:]])
@@ -247,9 +244,6 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
             ocp_solver.set(i,"yref", new_ref)
     ocp_solver.set(N_horiz,"p",param)
     ocp_solver.set(N_horiz,"yref", new_ref[:yref_e.shape[0]])
-
-    #x_ref_final = np.concatenate([p_ref_i, v_ref_i, rpy_ref_i, dot_rpy_ref_i ,a_ref_i,j_ref_i, s_ref_i])
-    #x_ref_final = np.array(p_ref)
 
     return ocp_solver, N_horiz, nx, nu
 
