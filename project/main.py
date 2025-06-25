@@ -1,8 +1,8 @@
 #                MAIN
 from drone_ocp_settings import *
+from casadi import pi as pi
 
- ###### RIPARTIRE DA: CAPIRE COME AFFRONTARE IL PROBLEMA DELLA BEST VIEW: VINCOLARE 
- # TUTTE LE COMPONENTI DELLA POSIZIONE?
+############################## CAPIRE PERCHÉ È UN PROBLEMA IL RIFERIMENTO NEGATIVO
 
 def main():
     # Time
@@ -20,21 +20,40 @@ def main():
     # Hover thrust
     hover_thrust = m * g0 * zb0
     u_hover = np.concatenate([hover_thrust.full().flatten(), np.zeros(3)])
-    
+
+    '''
+                                            OBJECT TRAJECTORY
+    '''
     #OBJECT reference trajectory specification
-    p_obj_in = np.array([4 , 4 , 0])    
+    p_obj_in = np.array([2 , 2 , 0])    
     p_obj_f =  np.array([10, 10, 10])
     rot_obj_in =np.array([0,0,0]) 
     rot_obj_f =np.array([0,0,0]) 
-    ref_in  = np.concatenate([p_obj_in,rot_obj_in])
-    ref_f   = np.concatenate([p_obj_f,rot_obj_f])
+    ref_obj_in  = np.concatenate([p_obj_in,rot_obj_in])
+    ref_obj_f   = np.concatenate([p_obj_f,rot_obj_f])
 
-    # Reference trajectory (Object) (orientation in RPY)
-    traj_time, p_obj, rpy_obj = generate_trapezoidal_trajectory(ref_in, ref_f, t0, Tf, ts, v_max=1.0, a_max=1.0)
+    # Object trajectory (orientation in RPY)
+    traj_time, p_obj, rpy_obj = generate_trapezoidal_trajectory(ref_obj_in, ref_obj_f, t0, Tf, ts, v_max=1.0, a_max=1.0)
+ 
 
-    # Drone reference
+    '''
+                                            REFERENCES
+    '''
+    # Mutual position and orientation references
     radius = 2
-        
+    mut_pos_ref = np.array([radius, 0.0, 0.0]) # radius, pan and tilt
+    mut_rot_ref = np.array([0.0, 0.0, -pi/2])     # rad
+
+    mut_pos_final_ref = np.array([radius * (1+1/2), pi/6, pi/4]) # radius, pan and tilt
+    mut_rot_final_ref = np.array([0.0, 0.0, -pi])                # rad
+
+    ref = np.concatenate([mut_pos_ref, mut_rot_ref])
+    final_ref = np.concatenate([mut_pos_final_ref, mut_rot_final_ref])
+
+
+    '''
+                                            WEIGHTS
+    '''
     #NORMALIZE WEIGTHS
     D = 10          # m
     PANTILT = 2*pi    # rad
@@ -42,38 +61,36 @@ def main():
     ANG = 2*pi        # rad
     ANG_DOT = pi/3   # rad/s
     ACC = 6        # m/s^2
+    ACC_ANG = 200 
     JERK = 20       # m/s^3
     SNAP = 200       # m/s^4
     U_F = 40        # N
     U_TAU = 3       # N*m    
 
-    Q_pos = np.diag([5 / (D**2), 5 / (PANTILT**2), 5 / (PANTILT**2)])
+    # Weights construction
+    Q_pos = np.diag([10 / (D**2), 10 / (PANTILT**2), 10 / (PANTILT**2)])
     Q_vel = np.diag([0.2]*3)/V**2
-    Q_rot = np.diag([10,10,10])/ANG**2
-    Q_ang_dot = np.diag([1,1,1])/ANG_DOT**2
+    Q_rot = np.diag([10]*3)/ANG**2
+    Q_ang_dot = np.diag([10]*3)/ANG_DOT**2
     Q_acc = np.diag([0.08]*3)/ACC**2
+    #Q_acc_ang = np.diag([0]*3)/ACC_ANG**2
     Q_jerk = np.diag([0.05]*3)/JERK**2
     Q_snap = np.diag([0.04]*3)/SNAP**2
     
-    R_f = np.diag([0.001]*3)/U_F*2
+    R_f = np.diag([0.001]*3)/U_F**2
     R_tau = np.diag([0.001]*3)/U_TAU**2
     R = ca.diagcat(R_f,R_tau)
     Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_jerk, Q_snap)
-    # Cost weights
-    #W_x = np.diag([ 50, 100, 100,        #r, pan, tilt
-    #                wmax/10, wmax/10, wmax/10,    #v
-    #                wmax/5, wmax/5, wmax/5,   #mutual_rot
-    #                wmax/10, wmax/10, wmax/10])  #euler_rates
-    #W_a = np.diag([wmax/20]*3)/wmax        #accel
-    #W_j = np.diag([wmax/25]*3)/wmax        #jerk
-    #W_s = np.diag([wmax/30]*3)/wmax        #snap
-    #W_u = np.diag([wmax/100]*6)/wmax    #control
 
-    W   = diagcat(Q,R).full()
-    W_e = 10 * Q.full()    
+    # Cost weights to be passed to solver
+    W   = ca.diagcat(Q,R).full()
+    W_e = 10 * Q.full() 
 
+    '''
+                                            SOLVER
+    '''
     # configuring and solving OCP
-    ocp_solver, N_horiz, nx, nu = configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e,radius)
+    ocp_solver, N_horiz, nx, nu = configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref, final_ref)
 
     status = ocp_solver.solve()
     ocp_solver.print_statistics()
@@ -82,59 +99,78 @@ def main():
     else :
         print(ocp_solver.get_stats('time_tot'))        # total solution time (sec)
 
+
+    '''
+                                            SIMULATION RESULTS
+    '''
     # Simulation results extraction (orientation is in quat., since simulation is done in quat.)
     simX, simU, acc, jerk, snap = extract_trajectory_from_solver(ocp_solver, model, N_horiz, nx, nu)
     # Simulation results saving, orientation in RPY
     p, v, rpy, w = get_state_variables(simX)
     x_rpy=np.hstack((p, v, rpy, w))
-    #stacking references on states in one matrix
+    
+    # Cost terms for plotting
+    # initialization
+    dist_norm = np.zeros((N_horiz+1,1))
+    mutual_rot_rpy = np.zeros((N_horiz+1, 3))
     vel_norm    = np.zeros((N_horiz+1,1))
     acc_norm    = np.zeros((N_horiz+1,1))
     jerk_norm   = np.zeros((N_horiz+1,1))
     snap_norm   = np.zeros((N_horiz+1,1))
-    dist_norm = np.zeros((N_horiz+1,1))
-    #err_or_norm = np.zeros((N_horiz+1,1))
+    err_or_norm = np.zeros((N_horiz+1,1))
 
-    #get norm of v,a,j,s and of error
+    # Computing terms
     for i in range (N_horiz + 1) :
+        dist_norm[i]  = np.linalg.norm(p_obj[i]-p[i])
         vel_norm[i]  = np.linalg.norm(v[i])
+
+        # orientation
+        R_obj = RPY_to_R(rpy_obj[i,0],rpy_obj[i,1],rpy_obj[i,2])
+        R_drone = RPY_to_R(rpy[i,0], rpy[i,1], rpy[i,2])
+        mutual_R = ca.mtimes(R_drone, R_obj.T)
+        mutual_rot_rpy[i] = np.squeeze(R_to_RPY(mutual_R))
+        err_or_norm[i] = np.linalg.norm(mutual_rot_rpy[i])
+
         acc_norm[i]  = np.linalg.norm(acc[i])
         jerk_norm[i] = np.linalg.norm(jerk[i])
         snap_norm[i] = np.linalg.norm(snap[i])
-        dist_norm[i]  = np.linalg.norm(p_obj[i]-p[i])
-        #err_or_norm[i]  =   np.linalg.norm(rpy_obj[i]-rpy[i])   #roll
 
+    # saving constant references as vectors
+    ref_vec = np.repeat(ref.reshape(1,-1), len(traj_time), axis=0)
+    final_ref_vec = np.repeat(final_ref.reshape(1,-1), len(traj_time), axis=0)
+    # conversion of orientation in degrees
+    drone_rpy_deg = np.rad2deg(np.unwrap(rpy,axis=0))
+    mutual_rot_rpy_deg = np.rad2deg(np.unwrap(mutual_rot_rpy,axis=0))
+
+    '''
+                                            PLOTTING
+    '''    
 
     # Plot drone states and controls
-    #plot_drone(t_sim, 20, simU, x, True, True, model_rpy.t_label, model_rpy.x_labels, model_rpy.u_labels)
+    # plot_drone(t_sim, 20, simU, x, True, True, model_rpy.t_label, model_rpy.x_labels, model_rpy.u_labels)
     other_labels = [
-        rf"||p_d(t)-p_o(t)||",
-        rf"||\phi_d(t)-\phi(t)||",
+        rf"|| p_d(t)-p_o(t) ||",
         rf"||v(t)||",
         rf"||a(t)||",
         rf"||j(t)||",
         rf"||s(t)||"
         ]
-    
-    #constant reference array
-    dist1=np.repeat(radius,len(traj_time)).reshape(-1,1)
-    dist2 = np.repeat(radius+2, len(traj_time)).reshape(-1,1)
-    
-    #conversion of orientation in degrees
-    drone_rpy_deg = np.vstack([np.rad2deg(rpy[:,0]), np.rad2deg(rpy[:,1]), np.rad2deg(np.unwrap(rpy[:,2]))]).T
+
     # Animated Plot
     traj_plot3D_animated_with_orientation(traj_time,p, rpy, p_obj, rpy_obj)
-    #Error norm - plot
-    myPlotWithReference(traj_time, [dist1,dist2], dist_norm, other_labels[0],"Distance of drone from object", 2)
-    #myPlotWithReference(traj_time, np.zeros(len(traj_time)).reshape(-1,1), err_or_norm, other_labels[1],"Roll distance from ref value", 2)
 
-    #Velocity, acceleration, jerk, snap norms - plot
-    myPlot(traj_time,np.hstack([vel_norm, acc_norm, jerk_norm, snap_norm]),other_labels[2:], "Norms of velocity, acceleration, jerk and snap",2)
-    #States - plot
+    # Error norms - plot
+    myPlotWithReference(traj_time, [ref_vec[:,[0]], final_ref_vec[:,[0]]], dist_norm, other_labels[0],"Distance of drone from object", 2)
+    myPlotWithReference(traj_time, [np.rad2deg(np.unwrap(ref_vec[:,3:])), np.rad2deg(np.unwrap(final_ref_vec[:,3:]))], mutual_rot_rpy_deg, model_rpy.x_labels[6:9], "Mutual orientation through Euler angles [m]", 2)
+    
+    # Position and orientations - plot
     myPlotWithReference(traj_time, [p_obj], p, model_rpy.x_labels[0:3], "Positions [m]", 2)
     myPlotWithReference(traj_time, [], drone_rpy_deg , model_rpy.x_labels[6:9], "Orientations [deg]", 2)
 
-    #Control input - plot
+    # Velocity, acceleration, jerk, snap norms - plot
+    myPlot(traj_time,np.hstack([vel_norm, acc_norm, jerk_norm, snap_norm]),other_labels[1:], "Norms of velocity, acceleration, jerk and snap",2)    
+
+    # Control input - plot
     myPlot(traj_time[0:-1], simU, model_rpy.u_labels, "Control laws", 2)
     
 

@@ -26,8 +26,27 @@ m   = 1.            # [kg] mass
 Ixx, Iyy, Izz = 0.015, 0.015, 0.007 #Inertia
 J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
 
+# Porta angolo in [-pi,pi]
+def wrap_to_pi(angle):
+    if type(angle) is not ca.SX and type(angle) is not ca.DM :
+        return (angle + np.pi) % (2 * np.pi) - np.pi
+    else :
+        return ca.fmod(angle + np.pi, 2*np.pi) - np.pi    
+
+def angle_min(theta):
+    """Ritorna l'angolo minimo tra theta e il suo complemento a 2π, mantenendo il segno"""
+    return ca.if_else(
+        theta > 0,
+        ca.if_else(theta < ca.pi, theta, theta - 2 * ca.pi),
+        ca.if_else(theta > -ca.pi, theta, theta + 2 * ca.pi)
+    )
+
+
 # Da angoli RPY a matrice di rotazione
 def RPY_to_R(roll, pitch, yaw):
+    """
+    Costruisce la matrice di rotazione R (Casadi) a partire da angoli RPY
+    """
     cr = ca.cos(roll)
     sr = ca.sin(roll)
     cp = ca.cos(pitch)
@@ -41,6 +60,10 @@ def RPY_to_R(roll, pitch, yaw):
         ca.horzcat(sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr),
         ca.horzcat(-sp,     cp * sr,                cp * cr)
     )
+
+    R = ca.if_else(ca.fabs(R)<1e-6 ,0 , R)   #azzera gli elementi minori di 1e-6
+    
+    
     return R
 
 #Da mat di rotazione a rpy
@@ -49,10 +72,16 @@ def R_to_RPY(R):
     Estrae roll, pitch, yaw da una matrice di rotazione R (CasADi SX/MX)
     Restituisce (roll, pitch, yaw)
     """
-    pitch = -ca.asin(R[2, 0])
-    roll  = ca.atan2(R[2, 1], R[2, 2])
-    yaw   = ca.atan2(R[1, 0], R[0, 0])
-    return roll, pitch, yaw
+    roll   = ca.atan2(R[2, 1], R[2, 2])
+    pitch = -ca.asin(R[2,0])
+    yaw  = ca.atan2(R[1, 0], R[0, 0])
+
+    roll = ca.if_else(ca.fabs(roll)<1e-6 ,0 , roll)
+    pitch = ca.if_else(ca.fabs(pitch)<1e-6 ,0 , pitch)
+    yaw = ca.if_else(ca.fabs(yaw)<1e-6 ,0 , yaw)
+
+
+    return np.array([roll, pitch, yaw])
 
 
 
@@ -68,7 +97,7 @@ def quat_to_R(q):
 
 #Da quaternione ad RPY
 def quat_to_RPY(q):
-    #q = q / ca.norm_2(q)  # normalizza
+    q = q / ca.norm_2(q)  # normalizza
     qw, qx, qy, qz = q[0], q[1], q[2], q[3]
     # Roll (x-axis rotation)
     sinr_cosp = 2 * (qw*qx + qy*qz)
@@ -83,6 +112,11 @@ def quat_to_RPY(q):
     siny_cosp = 2 * (qw*qz + qx*qy)
     cosy_cosp = 1 - 2 * (qy*qy + qz*qz)
     yaw = ca.atan2(siny_cosp, cosy_cosp)
+
+    if roll is float :
+        roll[roll<1e-6]=0
+        pitch[pitch<1e-6]=0
+        yaw[yaw<1e-6]=0
     
     return ca.vertcat(roll, pitch, yaw)
 
@@ -127,22 +161,6 @@ def angularVel_to_EulerRates(roll,pitch,yaw,w):
 
     rpy_dot = ca.mtimes(T, w)
     return rpy_dot
-
-
-#def getTrack():
-#    track_file = os.path.join(str(Path(__file__).parent), "tracks/", track)
-#    array=np.loadtxt(track_file, skiprows=1)
-#    sref = array[1:,0]
-#    xref = array[1:,1]
-#    yref = array[1:,2]
-#    zref = array[1:,3]
-#
-#    return sref, xref, yref, zref
-#
-#[s_ref, x_ref, y_ref, z_ref] = getTrack()
-#
-#length = len(s_ref)
-#pathlength = s_ref[-1]
 
 
 def check_stabilizzability(A, B):
@@ -299,33 +317,45 @@ def compute_terminal_cost_P(model, x_eq, u_eq, Q, R):
 #    if plt_show:
 #        plt.show()
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+import numpy as np
+import matplotlib.pyplot as plt
+
 def myPlotWithReference(time, refs, sim, labels, title, ncols=2):
     """
     Plotta confronto tra traiettorie di riferimento e simulate.
 
-    - refs: lista di array (ciascuno con shape (N,)) => più riferimenti
-    - sim: array (N, n) => simulazione
-    - labels: lista di etichette (n)
+    - refs: lista di array, ciascuno shape (N, n) o (N,) --> riferimento
+    - sim: array di shape (N, n) o (N,) --> simulazione
+    - labels: lista di etichette per le variabili simulate (n)
     """
     plt.rcParams.update({
         "text.usetex": True,
         "font.family": "serif"
     })
 
-    n_refs = len(refs)
+    # Forza sim a 2D
     if sim.ndim == 1:
         sim = sim[:, np.newaxis]
-    n = sim.shape[1]  # numero variabili simulate
+    N, n = sim.shape
 
-    ref_colors = ['r', 'g', 'm', 'c']  # colori per più riferimenti
+    # Forza ogni riferimento a 2D con shape (N, n_ref_i)
+    refs = [r[:, np.newaxis] if r.ndim == 1 else r for r in refs]
+
+    # Check che tutti i riferimenti abbiano lo stesso numero di righe
+    assert all(r.shape[0] == N for r in refs), "Tutti i riferimenti devono avere N righe."
+
+    ref_colors = ['r', 'g', 'm', 'c', 'y', 'k']
 
     if n == 1:
         fig, ax = plt.subplots(figsize=(10, 4))
         for j, ref in enumerate(refs):
-            ax.plot(time, ref, '--', color=ref_colors[j % len(ref_colors)], label=f"Ref {j+1}")
+            ax.plot(time, ref[:, 0], '--', color=ref_colors[j % len(ref_colors)], label=f"Ref {j+1}")
         ax.plot(time, sim[:, 0], 'b-', label='Simulation')
         ax.set_title(rf"${labels[0]}$", fontsize=12)
-        ax.set_xlabel(r"Time [s]")
+        ax.set_xlabel("Time [s]")
         ax.set_ylabel(rf"${labels[0]}$")
         ax.grid(True)
         ax.legend()
@@ -335,13 +365,15 @@ def myPlotWithReference(time, refs, sim, labels, title, ncols=2):
         axes = axes.flatten()
         for i in range(n):
             for j, ref in enumerate(refs):
+                assert ref.shape[1] >= n, f"Riferimento {j} non ha almeno {n} colonne."
                 axes[i].plot(time, ref[:, i], '--', color=ref_colors[j % len(ref_colors)], label=f"Ref {j+1}")
             axes[i].plot(time, sim[:, i], 'b-', label='Simulation')
             axes[i].set_title(rf"${labels[i]}$", fontsize=12)
-            axes[i].set_xlabel(r"Time [s]")
+            axes[i].set_xlabel("Time [s]")
             axes[i].set_ylabel(rf"${labels[i]}$")
             axes[i].grid(True)
             axes[i].legend()
+        # Rimuovi subplot in eccesso
         for j in range(n, nrows * ncols):
             fig.delaxes(axes[j])
 

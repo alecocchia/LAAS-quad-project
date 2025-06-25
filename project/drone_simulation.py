@@ -81,9 +81,6 @@ def main():
 
     x=ca.horzcat(p,v,rpy,w)
 
-    plot_drone(np.linspace(0, N_sim*Tf, N_sim+1), 50, np.tile(u0, (N_sim,1)), x,
-                  latexify=True, time_label=sim.model.t_label, x_labels=sim.model.x_labels, u_labels=sim.model.u_labels)
-
 
 
 if __name__ == "__main__":

@@ -84,10 +84,10 @@ int main()
     x_current[3] = 0;
     x_current[4] = 0;
     x_current[5] = 0;
-    x_current[6] = 0.8660254037844387;
+    x_current[6] = 1;
     x_current[7] = 0;
     x_current[8] = 0;
-    x_current[9] = -0.49999999999999994;
+    x_current[9] = 0;
     x_current[10] = 0;
     x_current[11] = 0;
     x_current[12] = 0;
@@ -105,8 +105,8 @@ int main()
     u0[5] = 0.0;
     // set parameters
     double p[NP];
-    p[0] = 4;
-    p[1] = 4;
+    p[0] = 2;
+    p[1] = 2;
     p[2] = 0;
     p[3] = 0;
     p[4] = 0;

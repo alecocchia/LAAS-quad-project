@@ -20,17 +20,17 @@ def setup_model():
     return model, model_rpy
 
 def setup_initial_conditions() :
-    xx=0
-    y=0
-    z=0
+    xx = 0
+    y =  0
+    z =  0
     
-    vx=0
-    vy=0
-    vz=0
+    vx  = 0
+    vy  = 0
+    vz  = 0
 
-    roll=0
-    pitch=0
-    yaw=-pi/3
+    roll =  0
+    pitch = 0
+    yaw =   0
     q = RPY_to_quat(roll,pitch,yaw)
 
     wx=0
@@ -42,7 +42,7 @@ def setup_initial_conditions() :
     return x0,x0_rpy
 
 
-def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
+def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), final_ref = np.zeros(6)):
     
     # model:
     # model.x = [p(3), v(3), quat(4), omega(3)]
@@ -71,9 +71,9 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     # State physical constraints
     #ocp.constraints.lbx = np.array([0] + [-5]*3 + [-np.deg2rad(60)]*3)  
     #ocp.constraints.ubx = np.array([100] + [5]*3 + [np.deg2rad(60)]*3)
-    ocp.constraints.lbx =  np.array(0)      # zmin
-    ocp.constraints.ubx =  np.array(100)    # zmax
-    ocp.constraints.idxbx = np.array([2])   # z index
+    ocp.constraints.lbx =  np.array([0])      # zmin, wmin
+    ocp.constraints.ubx =  np.array([100] )    # zmax, wmax
+    ocp.constraints.idxbx = np.array([2])   # constrained variables indexes
     # Control constraints
     Fmax = 40  #more or less 4 times than hovering
     Tmax = 3
@@ -89,14 +89,14 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
 
     ##########                          COST FUNCTION               ##############
 
-    #Converting quaternion to rpy
-    rpy_expr = quat_to_RPY(model.x[6:10])
-
     # ========== Dynamics extraction ========== #
     xdot = model.f_expl_expr  # explicit model
 
     #Position
     p_expr = model.x[0:3]
+
+    #Converting quaternion to rpy
+    rpy_expr = quat_to_RPY(model.x[6:10])
 
     # Velocity
     v_expr = model.x[3:6]  # v = dot(p)
@@ -107,7 +107,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
 
     # Acceleration (is part of xdot)
     a_expr = xdot[3:6]
-
+    #a_ang_expr = xdot[-3:]  #per ora per semplicità è la derivata di w (omega)
 ############################################################################################################                   
     #Jerk
     j_expr = ca.jacobian(a_expr, model.x) @ xdot                
@@ -120,48 +120,52 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     
     # Substitution of u with u_hovering to obtain acc, jerk, snap "at hovering" for last time instant (no dependance on model.u)
     a_hover = ca.substitute(a_expr, model.u, u_hovering)
+    #a_ang_hover = ca.substitute(a_ang_expr, model.u, u_hovering)
     j_hover = ca.substitute(j_expr, model.u, u_hovering)
     s_hover = ca.substitute(s_expr, model.u, u_hovering)
 
     ############## REFERENCES
     #importing references as sym from model, for y_expr    
     #POSITION
-    p_ref_sym=model.p[0:3]
-    p_rel_sym = p_expr - p_ref_sym
+    p_obj_sym = model.p[0:3]
+    p_rel_sym = p_expr - p_obj_sym
+
     r_expr = ca.norm_2(p_rel_sym)                       #radius
-    pan_expr = ca.arctan2(p_rel_sym[0], p_rel_sym[1])   #polar angle
+    pan_expr = ca.arctan2(p_rel_sym[1], p_rel_sym[0])   #polar angle
     tilt_expr = ca.arcsin(p_rel_sym[2]/r_expr)          #azimuth angle
-    dist_drone_obj= p_expr[0]-p_ref_sym[0]
+    
+    p_rel_expr = np.array([r_expr, pan_expr, tilt_expr])    #relative position in spherical coordinates
 
     #ORIENTATION
-    rpy_ref_sym=model.p[3:]
-    R_obj = RPY_to_R(rpy_ref_sym[0],rpy_ref_sym[1],rpy_ref_sym[2])
+    rpy_obj_sym = model.p[3:]
+    R_obj = RPY_to_R(rpy_obj_sym[0],rpy_obj_sym[1],rpy_obj_sym[2])
     R_drone = RPY_to_R(rpy_expr[0], rpy_expr[1], rpy_expr[2])
-    mutual_R = R_obj * R_drone.T
-    mutual_rot = R_to_RPY(mutual_R)
+    mutual_R = ca.mtimes(R_drone, R_obj.T)
+    mutual_rot_rpy = R_to_RPY(mutual_R)
+    mutual_rot_rpy = [angle_min(mutual_rot_rpy[i]) for i in range(3)]
+
+    
     
     # Const function quantities (expressed with respect to state and control)
     y_expr = ca.vertcat(
-        r_expr,
-        pan_expr,
-        tilt_expr,
+        *p_rel_expr,
         v_expr,                         # velocity
-        *mutual_rot,
+        *mutual_rot_rpy,
         dot_rpy,                        # Euler rates
         a_expr,                         # acceleration
+        #a_ang_expr,
         j_expr,                         # jerk
         s_expr,                         # snap
         model.u                         # control
     )
     # Last time instant expression (senza model.u)
     y_expr_e = ca.vertcat(
-        r_expr,
-        pan_expr,
-        tilt_expr,
+        *p_rel_expr,
         v_expr,                         # velocity
-        *mutual_rot,
+        *mutual_rot_rpy,
         dot_rpy,                        # Euler rates
         a_hover,                        # acceleration
+        #a_ang_hover,
         j_hover,                        # jerk
         s_hover,                        # snap
     )
@@ -181,18 +185,19 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     #############       REFERENCES
     
     # Before task
-    mutual_pos_ref = np.array([radius, 0, 0])
-    mutual_rot_ref = np.array([0.0, 0.0, pi/2])
+    mutual_pos_ref = ref[0:3]
+    mutual_rot_ref = ref[3:]
     dot_rpy_ref = np.array([0,0,0])
     v_ref=np.array([0,0,0])
     acc_ref=np.array([0,0,0])
+    #acc_ang_ref = np.array([0,0,0])
     jerk_ref=np.array([0,0,0])
     snap_ref=np.array([0,0,0])
     u_ref=np.zeros(nu)
 
     # Task 
-    final_mut_pos = np.array([radius+radius/2, pi/6, pi/4])   # r pan e tilt
-    rpy_final_mut_rot = np.array([0, 0, pi])          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
+    final_mut_pos = final_ref[0:3]   # r pan e tilt
+    final_mut_rot_rpy = final_ref[3:]          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
 
     # Indexes
     pos_ind = slice(0,3)
@@ -200,7 +205,8 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     rpy_ind = slice(vel_ind.stop, vel_ind.stop+3)
     dot_rpy_ind = slice(rpy_ind.stop,rpy_ind.stop+3)
     acc_ind = slice(dot_rpy_ind.stop,dot_rpy_ind.stop+3)
-    jerk_ind = slice(acc_ind.stop,acc_ind.stop+3)
+    #acc_ang_ind = slice(acc_ind.stop,acc_ind.stop+3)
+    jerk_ind = slice(acc_ind.stop,acc_ind.stop+3)   # cambiare questo se si include acc_ang
     snap_ind = slice(jerk_ind.stop,jerk_ind.stop+3)
     u_ind = slice(snap_ind.stop,snap_ind.stop+6)
     
@@ -215,21 +221,24 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
     yref[rpy_ind]=mutual_rot_ref    # mutual rotation rpy
     yref[dot_rpy_ind]=dot_rpy_ref   # Euler rates
     yref[acc_ind]=acc_ref           # acceleration
+    #yref[acc_ang_ind]=acc_ang_ref
     yref[jerk_ind]=jerk_ref         # jerk
     yref[snap_ind]=snap_ref         # snap
     yref[u_ind]=u_ref               # control
 
     #for last tract of trajectoy (task)
-    new_ref = np.concatenate([final_mut_pos, yref[vel_ind], rpy_final_mut_rot, yref[dot_rpy_ind.start:]])
+    new_ref = yref.copy()
+    new_ref[pos_ind]=final_mut_pos
+    new_ref[rpy_ind]=final_mut_rot_rpy
 
     #Terminal reference
-    yref_e = new_ref[:yref_e.shape[0]]
+    yref_e = new_ref[:y_expr_e.numel()]   #p,rpy
 
     ocp.cost.yref = yref
     ocp.cost.yref_e = yref_e
 
     #solver creation
-    ocp.solver_options.nlp_solver_max_iter=300
+    ocp.solver_options.nlp_solver_max_iter=200
     ocp_solver = AcadosOcpSolver(ocp)
 
 
@@ -239,6 +248,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, radius=2.0):
         ocp_solver.set(i,"p",param)
 
         if (i>0.7*N_horiz):
+
             #param = np.concatenate([final_mut_pos,rpy_final_mut_rot])
             #ocp_solver.set(i,"p",param)
             ocp_solver.set(i,"yref", new_ref)
@@ -256,7 +266,7 @@ def extract_trajectory_from_solver(ocp_solver, model, N_horiz, nx, nu):
     simU = np.array([ocp_solver.get(i, "u") for i in range(N_horiz)])
     simP = np.array([ocp_solver.get(i, "p") for i in range(N_horiz + 1)])
 
-        # Valuto y_expr per ogni istante (tranne l'ultimo che non ha controllo u)
+    # Evaluate y_expr for each time instant (except for u that is until N-1)
     y_vals = []
     for i in range(N_horiz):
         y_i = fun_y(simX[i], simU[i],simP[i])
@@ -267,11 +277,12 @@ def extract_trajectory_from_solver(ocp_solver, model, N_horiz, nx, nu):
 
     y_vals = np.array(y_vals)  # (N_horiz+1) x dimensione_y_expr
 
-    # Ora estrai gli indici relativi ad accelerazione, jerk, snap all'interno di y_expr
+    # Extraction of indexes relative to acc, jerk and snap in y_expr
     #               y_expr structure:
     # y_expr = vertcat(
-    #    model.x[0:6],        # p(0:6), v(3:6)
-    #    rpy_expr,            # RPY  (3)
+    #    mut_pos,             # p_obj - p_drone (3)
+    #    model.x[3:6]         # v (3)
+    #    mut_rot_rpy,         # R_to_RPY (R_obj* R_drone^T)  (3)
     #    model.x[10:13],      # omega (3)
     #    a_expr,              # acceleration (3)
     #    j_expr,              # jerk (3)
@@ -301,21 +312,24 @@ def get_state_variables(simX):
     w = simX[:, 10:13]
     return p, v, rpy, w
 
-#def drone_ref_from_obj(p_obj,rpy_obj,radius) :
-    # Reference for the drone based on distance from the object
-    p_obj = []
-    rpy_obj = []
-    for poss, rott in zip(p_obj, rpy_obj):
-        R_obj = RPY_to_R(*rott)
-        offset_dir = R_obj[:, 0]
-        p_drone = poss + radius * offset_dir
-        p_obj.append(p_drone)
-        #vec_to_obj = p_obj - p_drone
-        roll = 0
-        pitch = 0
-        yaw = 0
-        rpy_obj.append([float(roll), float(pitch), float(yaw)])
-    p_obj = np.squeeze(np.array(p_obj))
-    rpy_obj = np.squeeze(np.array(rpy_obj))
-    return p_obj, rpy_obj 
 
+
+
+##def drone_ref_from_obj(p_obj,rpy_obj,radius) :
+#    # Reference for the drone based on distance from the object
+#    p_obj = []
+#    rpy_obj = []
+#    for poss, rott in zip(p_obj, rpy_obj):
+#        R_obj = RPY_to_R(*rott)
+#        offset_dir = R_obj[:, 0]
+#        p_drone = poss + radius * offset_dir
+#        p_obj.append(p_drone)
+#        #vec_to_obj = p_obj - p_drone
+#        roll = 0
+#        pitch = 0
+#        yaw = 0
+#        rpy_obj.append([float(roll), float(pitch), float(yaw)])
+#    p_obj = np.squeeze(np.array(p_obj))
+#    rpy_obj = np.squeeze(np.array(rpy_obj))
+#    return p_obj, rpy_obj 
+#

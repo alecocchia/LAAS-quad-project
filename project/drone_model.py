@@ -2,7 +2,7 @@
 
 from acados_template import AcadosModel
 import numpy as np
-from casadi import * 
+import casadi as ca
 from common import *
 
 def export_quadrotor_ode_model() -> AcadosModel:
@@ -11,40 +11,40 @@ def export_quadrotor_ode_model() -> AcadosModel:
 
     # Model parameters
     m = 1.0  # mass [kg]
-    g = vertcat(0,0,g0)   # gravity [m/s^2]
+    g = ca.vertcat(0,0,g0)   # gravity [m/s^2]
     Ixx, Iyy, Izz = 0.015, 0.015, 0.007 #Inertia
-    J = SX(np.diag([Ixx, Iyy, Izz])) #Inertia
+    J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
 
     # States
     # Position
-    px, py, pz = SX.sym('px'), SX.sym('py'), SX.sym('pz')
-    p = vertcat(px, py, pz)
+    px, py, pz = ca.SX.sym('px'), ca.SX.sym('py'), ca.SX.sym('pz')
+    p = ca.vertcat(px, py, pz)
 
     # Linear velocity
-    vx, vy, vz = SX.sym('vx'), SX.sym('vy'), SX.sym('vz')
-    v = vertcat(vx, vy, vz)
+    vx, vy, vz = ca.SX.sym('vx'), ca.SX.sym('vy'), ca.SX.sym('vz')
+    v = ca.vertcat(vx, vy, vz)
 
     # Quaternion (orientation)
-    qw = SX.sym('qw')
-    qx = SX.sym('qx')
-    qy = SX.sym('qy')
-    qz = SX.sym('qz')
-    q = vertcat(qw, qx, qy, qz)
+    qw = ca.SX.sym('qw')
+    qx = ca.SX.sym('qx')
+    qy = ca.SX.sym('qy')
+    qz = ca.SX.sym('qz')
+    q = ca.vertcat(qw, qx, qy, qz)
 
     # Angular velocity
-    wx, wy, wz = SX.sym('wx'), SX.sym('wy'), SX.sym('wz')
-    w = vertcat(wx, wy, wz)
+    wx, wy, wz = ca.SX.sym('wx'), ca.SX.sym('wy'), ca.SX.sym('wz')
+    w = ca.vertcat(wx, wy, wz)
 
     # Inputs (generalized forces) in body frame
-    Fx = SX.sym('Fx')
-    Fy = SX.sym('Fy')
-    Fz = SX.sym('Fz')
-    tau_x = SX.sym('tau_x')
-    tau_y = SX.sym('tau_y')
-    tau_z = SX.sym('tau_z')
-    F = vertcat(Fx, Fy, Fz)
-    tau = vertcat(tau_x, tau_y, tau_z)
-    u = vertcat(F, tau)
+    Fx = ca.SX.sym('Fx')
+    Fy = ca.SX.sym('Fy')
+    Fz = ca.SX.sym('Fz')
+    tau_x = ca.SX.sym('tau_x')
+    tau_y = ca.SX.sym('tau_y')
+    tau_z = ca.SX.sym('tau_z')
+    F = ca.vertcat(Fx, Fy, Fz)
+    tau = ca.vertcat(tau_x, tau_y, tau_z)
+    u = ca.vertcat(F, tau)
 
     # Rotation matrix from quaternion
     Rb = quat_to_R(q)
@@ -53,14 +53,14 @@ def export_quadrotor_ode_model() -> AcadosModel:
     # Equations of motion (ODEs)
     p_dot = v
     v_dot = (1/m) * ca.mtimes(Rb, F) - g
-    q_dot = 0.5 * mtimes(omega_matrix(w), q)    #propagazione del quaternione
-    w_dot = mtimes(ca.inv(J), (tau - cross(w, mtimes(J, w))))
+    q_dot = 0.5 * ca.mtimes(omega_matrix(w), q)    #propagazione del quaternione
+    w_dot = ca.mtimes(ca.inv(J), (tau - ca.cross(w, ca.mtimes(J, w))))
 
     # Compose state and xdot
-    x = vertcat(p, v, q, w)
-    xdot=SX.sym('xdot',x.shape,)
+    x = ca.vertcat(p, v, q, w)
+    xdot=ca.SX.sym('xdot',x.shape,)
 
-    f_expl = vertcat(p_dot,v_dot,q_dot,w_dot)
+    f_expl = ca.vertcat(p_dot,v_dot,q_dot,w_dot)
     f_impl = xdot - f_expl
 
     # Define model
@@ -93,15 +93,15 @@ def export_quadrotor_ode_model() -> AcadosModel:
 def convert_to_rpy_model(model_quat):
 
     # Model parameters
-    g = vertcat(0,0,g0)   # gravity [m/s^2]
+    g = ca.vertcat(0,0,g0)   # gravity [m/s^2]
 
 
     # Nuove variabili di stato
-    p = SX.sym('p', 3)
-    v = SX.sym('v', 3)
-    rpy = SX.sym('rpy', 3)
-    omega = SX.sym('omega', 3)
-    x = vertcat(p, v, rpy, omega)
+    p = ca.SX.sym('p', 3)
+    v = ca.SX.sym('v', 3)
+    rpy = ca.SX.sym('rpy', 3)
+    omega = ca.SX.sym('omega', 3)
+    x = ca.vertcat(p, v, rpy, omega)
 
     # Controlli
     u = model_quat.u
@@ -115,19 +115,19 @@ def convert_to_rpy_model(model_quat):
     Rb=RPY_to_R(phi,theta,psi)
 
     dp = v
-    dv = (1/m) * mtimes(Rb ,F) - g
+    dv = (1/m) * ca.mtimes(Rb ,F) - g
 
     # Derivata degli angoli di eulero
-    #T = SX(3,3)
+    #T = ca.SX(3,3)
     #T[0,:] = ca.horzcat(1, sin(phi)*tan(theta), cos(phi)*tan(theta))
     #T[1,:] = ca.horzcat(0, cos(phi),           -sin(phi))
     #T[2,:] = ca.horzcat(0, sin(phi)/cos(theta), cos(phi)/cos(theta))
     #drpy = T @ omega
     drpy = angularVel_to_EulerRates(phi,theta,psi,omega)
 
-    domega = mtimes(ca.inv(J), (tau - cross(omega, mtimes(J, omega))))
+    domega = ca.mtimes(ca.inv(J), (tau - ca.cross(omega, ca.mtimes(J, omega))))
 
-    xdot = vertcat(dp, dv, drpy, domega)
+    xdot = ca.vertcat(dp, dv, drpy, domega)
 
     model_rpy = type('', (), {})()
     model_rpy.x = x
