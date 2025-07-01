@@ -26,20 +26,21 @@ m   = 1.            # [kg] mass
 Ixx, Iyy, Izz = 0.015, 0.015, 0.007 #Inertia
 J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
 
-# Porta angolo in [-pi,pi]
-def wrap_to_pi(angle):
-    if type(angle) is not ca.SX and type(angle) is not ca.DM :
-        return (angle + np.pi) % (2 * np.pi) - np.pi
-    else :
-        return ca.fmod(angle + np.pi, 2*np.pi) - np.pi    
+## Porta angolo in [-pi,pi]
+#def wrap_to_pi(angle):
+#    two_pi = 2 * ca.pi
+#    wrapped = angle - two_pi * ca.floor((angle + ca.pi) / two_pi)
+#    wrapped = ca.if_else(angle== -ca.pi, -ca.pi, wrapped)
+#    return wrapped
 
-def angle_min(theta):
-    """Ritorna l'angolo minimo tra theta e il suo complemento a 2π, mantenendo il segno"""
-    return ca.if_else(
-        theta > 0,
-        ca.if_else(theta < ca.pi, theta, theta - 2 * ca.pi),
-        ca.if_else(theta > -ca.pi, theta, theta + 2 * ca.pi)
-    )
+def min_angle(alpha) :
+    """
+    Prende il minimo valore angolare in [0,2pi] (utile per distanza angolare effettiva)
+    """    
+    theta = ca.fabs(alpha)
+    alpha_compl = ca.if_else(alpha >= 0, -(2*ca.pi-theta), 2*ca.pi-theta)
+    return ca.if_else(theta <= ca.pi, alpha, alpha_compl)
+
 
 
 # Da angoli RPY a matrice di rotazione
@@ -72,16 +73,16 @@ def R_to_RPY(R):
     Estrae roll, pitch, yaw da una matrice di rotazione R (CasADi SX/MX)
     Restituisce (roll, pitch, yaw)
     """
-    roll   = ca.atan2(R[2, 1], R[2, 2])
-    pitch = -ca.asin(R[2,0])
-    yaw  = ca.atan2(R[1, 0], R[0, 0])
+    roll   = (ca.atan2(R[2, 1], R[2, 2]))
+    pitch = (-ca.asin(R[2,0]))
+    yaw  = (ca.atan2(R[1, 0], R[0, 0]))
 
     roll = ca.if_else(ca.fabs(roll)<1e-6 ,0 , roll)
     pitch = ca.if_else(ca.fabs(pitch)<1e-6 ,0 , pitch)
     yaw = ca.if_else(ca.fabs(yaw)<1e-6 ,0 , yaw)
 
 
-    return np.array([roll, pitch, yaw])
+    return ca.vertcat(roll, pitch, yaw)
 
 
 

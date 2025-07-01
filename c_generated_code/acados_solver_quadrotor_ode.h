@@ -39,7 +39,7 @@
 #define QUADROTOR_ODE_NX     13
 #define QUADROTOR_ODE_NZ     0
 #define QUADROTOR_ODE_NU     6
-#define QUADROTOR_ODE_NP     6
+#define QUADROTOR_ODE_NP     9
 #define QUADROTOR_ODE_NP_GLOBAL     0
 #define QUADROTOR_ODE_NBX    1
 #define QUADROTOR_ODE_NBX0   13
@@ -61,9 +61,9 @@
 #define QUADROTOR_ODE_NG     0
 #define QUADROTOR_ODE_NBXN   0
 #define QUADROTOR_ODE_NGN    0
-#define QUADROTOR_ODE_NY0    27
-#define QUADROTOR_ODE_NY     27
-#define QUADROTOR_ODE_NYN    21
+#define QUADROTOR_ODE_NY0    30
+#define QUADROTOR_ODE_NY     30
+#define QUADROTOR_ODE_NYN    24
 #define QUADROTOR_ODE_N      1000
 #define QUADROTOR_ODE_NH     0
 #define QUADROTOR_ODE_NHN    0

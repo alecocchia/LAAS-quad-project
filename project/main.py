@@ -42,10 +42,10 @@ def main():
     # Mutual position and orientation references
     radius = 2
     mut_pos_ref = np.array([radius, 0.0, 0.0]) # radius, pan and tilt
-    mut_rot_ref = np.array([0.0, 0.0, -pi/2])     # rad
+    mut_rot_ref = np.array([0, 0, -pi/2])     # rad
 
     mut_pos_final_ref = np.array([radius * (1+1/2), pi/6, pi/4]) # radius, pan and tilt
-    mut_rot_final_ref = np.array([0.0, 0.0, -pi])                # rad
+    mut_rot_final_ref = np.array([0, 0, -pi])                # rad
 
     ref = np.concatenate([mut_pos_ref, mut_rot_ref])
     final_ref = np.concatenate([mut_pos_final_ref, mut_rot_final_ref])
@@ -69,18 +69,18 @@ def main():
 
     # Weights construction
     Q_pos = np.diag([10 / (D**2), 10 / (PANTILT**2), 10 / (PANTILT**2)])
-    Q_vel = np.diag([0.2]*3)/V**2
-    Q_rot = np.diag([10]*3)/ANG**2
-    Q_ang_dot = np.diag([10]*3)/ANG_DOT**2
-    Q_acc = np.diag([0.08]*3)/ACC**2
-    #Q_acc_ang = np.diag([0]*3)/ACC_ANG**2
-    Q_jerk = np.diag([0.05]*3)/JERK**2
-    Q_snap = np.diag([0.04]*3)/SNAP**2
+    Q_vel = np.diag([0.1]*3)/V**2
+    Q_rot = np.diag([10, 10, 10])/ANG**2
+    Q_ang_dot = np.diag([1]*3)/ANG_DOT**2
+    Q_acc = np.diag([0.5]*3)/ACC**2
+    Q_acc_ang = np.diag([0.5]*3)/ACC_ANG**2
+    Q_jerk = np.diag([0.5]*3)/JERK**2
+    Q_snap = np.diag([0.5]*3)/SNAP**2
     
-    R_f = np.diag([0.001]*3)/U_F**2
-    R_tau = np.diag([0.001]*3)/U_TAU**2
+    R_f = np.diag([0.01]*3)/U_F**2
+    R_tau = np.diag([0.1]*3)/U_TAU**2
     R = ca.diagcat(R_f,R_tau)
-    Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_jerk, Q_snap)
+    Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_acc_ang, Q_jerk, Q_snap)
 
     # Cost weights to be passed to solver
     W   = ca.diagcat(Q,R).full()
@@ -103,8 +103,8 @@ def main():
     '''
                                             SIMULATION RESULTS
     '''
-    # Simulation results extraction (orientation is in quat., since simulation is done in quat.)
-    simX, simU, acc, jerk, snap = extract_trajectory_from_solver(ocp_solver, model, N_horiz, nx, nu)
+    # Simulation results extraction (simP: pos_obj, or_obj, mut_rot_references)
+    simX, simU, simP, acc, jerk, snap = extract_trajectory_from_solver(ocp_solver, model, N_horiz, nx, nu)
     # Simulation results saving, orientation in RPY
     p, v, rpy, w = get_state_variables(simX)
     x_rpy=np.hstack((p, v, rpy, w))
@@ -161,7 +161,7 @@ def main():
 
     # Error norms - plot
     myPlotWithReference(traj_time, [ref_vec[:,[0]], final_ref_vec[:,[0]]], dist_norm, other_labels[0],"Distance of drone from object", 2)
-    myPlotWithReference(traj_time, [np.rad2deg(np.unwrap(ref_vec[:,3:])), np.rad2deg(np.unwrap(final_ref_vec[:,3:]))], mutual_rot_rpy_deg, model_rpy.x_labels[6:9], "Mutual orientation through Euler angles [m]", 2)
+    myPlotWithReference(traj_time, [np.rad2deg(simP[:,6:9])], mutual_rot_rpy_deg, model_rpy.x_labels[6:9], "Mutual orientation through Euler angles [m]", 2)
     
     # Position and orientations - plot
     myPlotWithReference(traj_time, [p_obj], p, model_rpy.x_labels[0:3], "Positions [m]", 2)
