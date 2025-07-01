@@ -5,7 +5,7 @@ from planner import *
 from scipy.linalg import solve_continuous_are
 import numpy as np
 import casadi as ca
-
+from scipy.spatial.transform import Rotation 
 
 #################  AGGIUSTARE: ricavare snap, jerk, acc in qualche modo perché da y_expr non si può tramite get(...)
 ##############  Estendere lo stato con tutti gli stati
@@ -31,13 +31,15 @@ def setup_initial_conditions() :
     roll =  0
     pitch = 0
     yaw =   0
-    q = RPY_to_quat(roll,pitch,yaw)
+
+    q=Rotation.from_euler('xyz', [roll, pitch, yaw]).as_quat()
+    qw,qx,qy,qz = np.roll(q,1)
 
     wx=0
     wy=0
     wz=0
 
-    x0 = np.array([xx,y,z,vx,vy,vz,*q,wx,wy,wz])
+    x0 = np.array([xx,y,z,vx,vy,vz,qw,qx,qy,qz,wx,wy,wz])
     x0_rpy=np.array([xx,y,z,vx,vy,vz,roll,pitch,yaw,wx,wy,wz])
     return x0,x0_rpy
 
@@ -50,6 +52,9 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # Dimensions
     nx = model.x.rows()
     nu = model.u.rows()
+
+    ref[3:6] = [wrap_to_pi(ref[i]) for i in range(3,6)]
+    final_ref[3:6] = [wrap_to_pi(final_ref[i]) for i in range(3,6)] 
 
     #prediction horizon time
     N_horiz = int(Tf/ts)
@@ -143,13 +148,13 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
 
     R_obj = RPY_to_R(rpy_obj_sym[0],rpy_obj_sym[1],rpy_obj_sym[2])
     R_drone = RPY_to_R(rpy_expr[0], rpy_expr[1], rpy_expr[2])
-    mutual_R = ca.mtimes(R_drone, R_obj.T)
+    mutual_R = ca.mtimes(R_drone.T, R_obj)
     #mutual_R_ref = RPY_to_R(mut_rot_ref[0],mut_rot_ref[1],mut_rot_ref[2])
     #mutual_R_error = ca.mtimes(mutual_R, mutual_R_ref.T)
     #mutual_rot_error = R_to_RPY(mutual_R_error)
     mutual_rot_rpy = R_to_RPY(mutual_R)
-    mutual_rot_error = (mutual_rot_rpy-mut_rot_ref)
-    mutual_rot_error = [min_angle(mutual_rot_error[i]) for i in range(3)]
+    mutual_rot_error = (mut_rot_ref-mutual_rot_rpy)
+    mutual_rot_error = [min_angle_sym(mutual_rot_error[i]) for i in range(3)]
     
     
     # Const function quantities (expressed with respect to state and control)
@@ -249,6 +254,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     ocp_solver = AcadosOcpSolver(ocp)
 
 
+
     # Definition of cost references (ocp_solver.yref) and substituting pos and ang object values from sym to real
     # together with mutual_rotation_reference
     for i in range(N_horiz):
@@ -259,6 +265,8 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
             param = np.concatenate([p_obj[i],rpy_obj[i],final_mut_rot_ref])
             ocp_solver.set(i,"yref", new_ref)
         ocp_solver.set(i,"p",param)
+
+    param = np.concatenate([p_obj[N_horiz], rpy_obj[N_horiz], final_mut_rot_ref])
     ocp_solver.set(N_horiz,"p",param)
     ocp_solver.set(N_horiz,"yref", new_ref[:yref_e.shape[0]])
 

@@ -41,7 +41,7 @@
 #define QUADROTOR_ODE_NU     6
 #define QUADROTOR_ODE_NP     9
 #define QUADROTOR_ODE_NP_GLOBAL     0
-#define QUADROTOR_ODE_NBX    1
+#define QUADROTOR_ODE_NBX    7
 #define QUADROTOR_ODE_NBX0   13
 #define QUADROTOR_ODE_NBU    6
 #define QUADROTOR_ODE_NSBX   0

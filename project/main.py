@@ -42,10 +42,10 @@ def main():
     # Mutual position and orientation references
     radius = 2
     mut_pos_ref = np.array([radius, 0.0, 0.0]) # radius, pan and tilt
-    mut_rot_ref = np.array([0, 0, -pi/2])     # rad
+    mut_rot_ref = np.array([0, 0, np.deg2rad(140)])     # rad
 
     mut_pos_final_ref = np.array([radius * (1+1/2), pi/6, pi/4]) # radius, pan and tilt
-    mut_rot_final_ref = np.array([0, 0, -pi])                # rad
+    mut_rot_final_ref = np.array([0, 0, np.deg2rad(200)])                # rad
 
     ref = np.concatenate([mut_pos_ref, mut_rot_ref])
     final_ref = np.concatenate([mut_pos_final_ref, mut_rot_final_ref])
@@ -69,16 +69,16 @@ def main():
 
     # Weights construction
     Q_pos = np.diag([10 / (D**2), 10 / (PANTILT**2), 10 / (PANTILT**2)])
-    Q_vel = np.diag([0.1]*3)/V**2
+    Q_vel = np.diag([1]*3)/V**2
     Q_rot = np.diag([10, 10, 10])/ANG**2
     Q_ang_dot = np.diag([1]*3)/ANG_DOT**2
     Q_acc = np.diag([0.5]*3)/ACC**2
     Q_acc_ang = np.diag([0.5]*3)/ACC_ANG**2
-    Q_jerk = np.diag([0.5]*3)/JERK**2
-    Q_snap = np.diag([0.5]*3)/SNAP**2
+    Q_jerk = np.diag([0.2]*3)/JERK**2
+    Q_snap = np.diag([0.1]*3)/SNAP**2
     
-    R_f = np.diag([0.01]*3)/U_F**2
-    R_tau = np.diag([0.1]*3)/U_TAU**2
+    R_f = np.diag([0]*3)/U_F**2
+    R_tau = np.diag([0]*3)/U_TAU**2
     R = ca.diagcat(R_f,R_tau)
     Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_acc_ang, Q_jerk, Q_snap)
 
@@ -127,7 +127,7 @@ def main():
         # orientation
         R_obj = RPY_to_R(rpy_obj[i,0],rpy_obj[i,1],rpy_obj[i,2])
         R_drone = RPY_to_R(rpy[i,0], rpy[i,1], rpy[i,2])
-        mutual_R = ca.mtimes(R_drone, R_obj.T)
+        mutual_R = ca.mtimes(R_drone.T, R_obj)
         mutual_rot_rpy[i] = np.squeeze(R_to_RPY(mutual_R))
         err_or_norm[i] = np.linalg.norm(mutual_rot_rpy[i])
 

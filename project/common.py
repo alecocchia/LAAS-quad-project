@@ -27,13 +27,24 @@ Ixx, Iyy, Izz = 0.015, 0.015, 0.007 #Inertia
 J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
 
 ## Porta angolo in [-pi,pi]
-#def wrap_to_pi(angle):
-#    two_pi = 2 * ca.pi
-#    wrapped = angle - two_pi * ca.floor((angle + ca.pi) / two_pi)
-#    wrapped = ca.if_else(angle== -ca.pi, -ca.pi, wrapped)
-#    return wrapped
+def wrap_to_pi_sym(angle):
+    two_pi = 2 * ca.pi
+    wrapped = angle - two_pi * ca.floor((angle + ca.pi) / two_pi)
+    wrapped = ca.if_else(angle== -ca.pi, -ca.pi, wrapped)
+    return wrapped
 
-def min_angle(alpha) :
+def wrap_to_pi(angle):
+    """
+    Riporta angoli in [-pi, pi] usando NumPy (versione numerica).
+    Supporta anche array numpy.
+    """
+    wrapped = (angle + np.pi) % (2 * np.pi) - np.pi
+    # Corregge il caso limite di -pi (opzionale, simile a if_else in CasADi)
+    wrapped = np.where(np.isclose(wrapped, -np.pi), -np.pi, wrapped)
+    return wrapped
+
+
+def min_angle_sym(alpha) :
     """
     Prende il minimo valore angolare in [0,2pi] (utile per distanza angolare effettiva)
     """    
@@ -41,6 +52,20 @@ def min_angle(alpha) :
     alpha_compl = ca.if_else(alpha >= 0, -(2*ca.pi-theta), 2*ca.pi-theta)
     return ca.if_else(theta <= ca.pi, alpha, alpha_compl)
 
+def min_angle(alpha) :
+    """
+    Prende il minimo valore angolare in [0,2pi] (utile per distanza angolare effettiva)
+    """    
+    theta = np.abs(alpha)
+    if alpha >= 0 :
+        alpha_compl =  -(2*ca.pi-theta)
+    else :
+        2*ca.pi-theta
+    
+    if theta <= ca.pi :
+        return alpha
+    else :
+        return alpha_compl
 
 
 # Da angoli RPY a matrice di rotazione
@@ -62,7 +87,7 @@ def RPY_to_R(roll, pitch, yaw):
         ca.horzcat(-sp,     cp * sr,                cp * cr)
     )
 
-    R = ca.if_else(ca.fabs(R)<1e-6 ,0 , R)   #azzera gli elementi minori di 1e-6
+    #R = ca.if_else(ca.fabs(R)<1e-6 ,0 , R)   #azzera gli elementi minori di 1e-6
     
     
     return R
@@ -77,9 +102,10 @@ def R_to_RPY(R):
     pitch = (-ca.asin(R[2,0]))
     yaw  = (ca.atan2(R[1, 0], R[0, 0]))
 
-    roll = ca.if_else(ca.fabs(roll)<1e-6 ,0 , roll)
-    pitch = ca.if_else(ca.fabs(pitch)<1e-6 ,0 , pitch)
-    yaw = ca.if_else(ca.fabs(yaw)<1e-6 ,0 , yaw)
+    
+    #roll = ca.if_else(ca.fabs(roll)<1e-6 ,0 , roll)
+    #pitch = ca.if_else(ca.fabs(pitch)<1e-6 ,0 , pitch)
+    #yaw = ca.if_else(ca.fabs(yaw)<1e-6 ,0 , yaw)
 
 
     return ca.vertcat(roll, pitch, yaw)
@@ -88,6 +114,9 @@ def R_to_RPY(R):
 
 # Da quaternion a matrice di rotazione
 def quat_to_R(q):
+    '''
+    Prende q come qw,qx,qy,qz e restituisce RPY
+    '''
     #q = q / ca.norm_2(q)  # normalizza
     w, x, y, z = q[0], q[1], q[2], q[3]
     return ca.vertcat(
@@ -98,7 +127,10 @@ def quat_to_R(q):
 
 #Da quaternione ad RPY
 def quat_to_RPY(q):
-    q = q / ca.norm_2(q)  # normalizza
+    '''
+    Prende q come qw,qx,qy,qz e restituitsce RPY
+    '''
+    #q = q / ca.norm_2(q)  # normalizza
     qw, qx, qy, qz = q[0], q[1], q[2], q[3]
     # Roll (x-axis rotation)
     sinr_cosp = 2 * (qw*qx + qy*qz)
@@ -114,15 +146,17 @@ def quat_to_RPY(q):
     cosy_cosp = 1 - 2 * (qy*qy + qz*qz)
     yaw = ca.atan2(siny_cosp, cosy_cosp)
 
-    if roll is float :
-        roll[roll<1e-6]=0
-        pitch[pitch<1e-6]=0
-        yaw[yaw<1e-6]=0
+    #ca.if_else(ca.fabs(roll)<1e-6, 0, roll)
+    #ca.if_else(ca.fabs(pitch)<1e-6, 0, pitch)
+    #ca.if_else(ca.fabs(yaw)<1e-6, 0, yaw)
     
     return ca.vertcat(roll, pitch, yaw)
 
 #Da RPY a quaternione
 def RPY_to_quat(roll, pitch, yaw):
+    '''
+    Restituisce il quaternione come qw, qx, qy, qz
+    '''
     cr = ca.cos(roll / 2)
     sr = ca.sin(roll / 2)
     cp = ca.cos(pitch / 2)
@@ -135,8 +169,8 @@ def RPY_to_quat(roll, pitch, yaw):
     qy = cr * sp * cy + sr * cp * sy
     qz = cr * cp * sy - sr * sp * cy
 
-    q = np.array([qw, qx, qy, qz])
-    q = q / np.linalg.norm(q)  # Normalizza il quaternione
+    q = ca.vertcat([qw, qx, qy, qz])
+    #q = q / ca.norm_2(q)  # Normalizza il quaternione
 
     return q
 
