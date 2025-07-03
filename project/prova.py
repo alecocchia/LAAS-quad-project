@@ -31,8 +31,7 @@ import math
 #rpy_err = result.full().flatten()
 #print(rpy_err)
 
-print(min_angle(-ca.pi))
+print(np.rad2deg(min_angle(np.deg2rad(310))))
 #print(min_angle(-ca.pi))
 
 
-print(wrap_to_pi(np.deg2rad(200)))

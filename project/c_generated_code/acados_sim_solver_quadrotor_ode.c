@@ -173,8 +173,8 @@ int quadrotor_ode_acados_sim_create(quadrotor_ode_sim_solver_capsule * capsule)
     double* p = calloc(np, sizeof(double));
     
     p[0] = 2;
-    p[1] = -2;
-    p[8] = -1.5707963267948966;
+    p[1] = 2;
+    p[8] = 2.443460952792061;
 
     quadrotor_ode_acados_sim_update_params(capsule, p, np);
     free(p);

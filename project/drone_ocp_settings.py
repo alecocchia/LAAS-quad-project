@@ -53,8 +53,6 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     nx = model.x.rows()
     nu = model.u.rows()
 
-    ref[3:6] = [wrap_to_pi(ref[i]) for i in range(3,6)]
-    final_ref[3:6] = [wrap_to_pi(final_ref[i]) for i in range(3,6)] 
 
     #prediction horizon time
     N_horiz = int(Tf/ts)
@@ -70,7 +68,9 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     ocp.solver_options.N_horizon = N_horiz
     ocp.solver_options
 
-    ##########                          CONSTRAINTS             ################
+    '''
+                                            CONSTRAINTS             
+    '''
 
     # initial conditions for constraints
     ocp.constraints.x0 = x0
@@ -93,7 +93,10 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
     #ocp.solver_options.hessian_approx = 'EXACT'
 
-    ##########                          COST FUNCTION               ##############
+
+    '''
+                                        COST FUNCTION               
+    '''
 
     # ========== Dynamics extraction ========== #
     xdot = model.f_expl_expr  # explicit model
@@ -112,11 +115,11 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     dot_rpy = angularVel_to_EulerRates(rpy_expr[0],rpy_expr[1],rpy_expr[2],w_expr)
 
     # Acceleration (is part of xdot)
-    a_expr = xdot[3:6]
-    a_ang_expr = xdot[-3:]  #per ora per semplicità è la derivata di w (omega)
+    acc_expr = xdot[3:6]
+    acc_ang_expr = xdot[-3:]  #per ora per semplicità è la derivata di w (omega)
 ############################################################################################################                   
     #Jerk
-    j_expr = ca.jacobian(a_expr, model.x) @ xdot                
+    j_expr = ca.jacobian(acc_expr, model.x) @ xdot                
                                                                             #APPROSSIMAZIONE DERIVATE (non tenendo conto
                                                                             # di u e u_dot da cui j e s dipendono)                                           
     # Snap = symbolic time derivative of jerk (d/dt(j)= ...)                # valutare se espandere lo stato                               
@@ -125,12 +128,15 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     u_hovering = ca.DM([0, 0, m*g0, 0, 0, 0])
     
     # Substitution of u with u_hovering to obtain acc, jerk, snap "at hovering" for last time instant (no dependance on model.u)
-    a_hover = ca.substitute(a_expr, model.u, u_hovering)
-    a_ang_hover = ca.substitute(a_ang_expr, model.u, u_hovering)
+    acc_hover = ca.substitute(acc_expr, model.u, u_hovering)
+    acc_ang_hover = ca.substitute(acc_ang_expr, model.u, u_hovering)
     j_hover = ca.substitute(j_expr, model.u, u_hovering)
     s_hover = ca.substitute(s_expr, model.u, u_hovering)
 
-    ############## REFERENCES
+    '''
+                                    POSITION AND ORIENTATION COSTS DEFINITION
+    '''
+
     #importing references as sym from model, for y_expr    
     #POSITION
     p_obj_sym = model.p[0:3]
@@ -149,22 +155,29 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     R_obj = RPY_to_R(rpy_obj_sym[0],rpy_obj_sym[1],rpy_obj_sym[2])
     R_drone = RPY_to_R(rpy_expr[0], rpy_expr[1], rpy_expr[2])
     mutual_R = ca.mtimes(R_drone.T, R_obj)
-    #mutual_R_ref = RPY_to_R(mut_rot_ref[0],mut_rot_ref[1],mut_rot_ref[2])
-    #mutual_R_error = ca.mtimes(mutual_R, mutual_R_ref.T)
-    #mutual_rot_error = R_to_RPY(mutual_R_error)
-    mutual_rot_rpy = R_to_RPY(mutual_R)
-    mutual_rot_error = (mut_rot_ref-mutual_rot_rpy)
-    mutual_rot_error = [min_angle_sym(mutual_rot_error[i]) for i in range(3)]
+
+    mutual_R_ref = RPY_to_R(mut_rot_ref[0],mut_rot_ref[1],mut_rot_ref[2])
+    mutual_R_error = ca.mtimes(mutual_R_ref.T, mutual_R)
+
+    #mutual_rot_error = [min_angle(R_to_RPY(mutual_R_error))]
+    #mutual_rot_rpy = R_to_RPY(mutual_R)
+    #mutual_rot_error = [min_angle(mut_rot_ref-mutual_rot_rpy)]
+    mutual_rot_error = R_to_quat(mutual_R_error)
+
     
-    
-    # Const function quantities (expressed with respect to state and control)
+    '''
+                                        COST EXPRESSIONS
+    '''
+
+
+    # Cost function quantities (expressed with respect to state and control)
     y_expr = ca.vertcat(
         *p_rel_expr,
         v_expr,                         # velocity
-        *mutual_rot_error,
+        mutual_rot_error,
         dot_rpy,                        # Euler rates
-        a_expr,                         # acceleration
-        a_ang_expr,
+        acc_expr,                       # acceleration
+        acc_ang_expr,                     # angular acceleration
         j_expr,                         # jerk
         s_expr,                         # snap
         model.u                         # control
@@ -173,10 +186,10 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     y_expr_e = ca.vertcat(
         *p_rel_expr,
         v_expr,                         # velocity
-        *mutual_rot_error,
+        mutual_rot_error,
         dot_rpy,                        # Euler rates
-        a_hover,                        # acceleration
-        a_ang_hover,
+        acc_hover,                      # acceleration
+        acc_ang_hover,
         j_hover,                        # jerk
         s_hover,                        # snap
     )
@@ -194,7 +207,9 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # initial values of parametes (p_obj,rpy_obj) (they will be updated at each iteration )
     ocp.parameter_values = np.concatenate([p_obj[0,:],rpy_obj[0,:], ref[3:6]])  
 
-    #############       REFERENCES
+    '''
+                                        REFERENCES
+    '''
     
     # Before task
     mut_pos_ref = ref[0:3]
@@ -210,11 +225,14 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # Task 
     final_mut_pos_ref = final_ref[0:3]   # r pan e tilt
     final_mut_rot_ref = final_ref[3:6]          ###### FARE IN MODO CHE SIA ORIENTATO COME JOYSTICK
+    #for i in range(3,6) : 
+    #    if np.abs(min_angle(final_ref[i]-ref[i])) < np.abs(final_ref[i]):
+    #        final_mut_rot_ref[i-3] =  ref[i] + min_angle(final_ref[i]-ref[i])
 
     # Indexes
     pos_ind = slice(0,3)
     vel_ind = slice(pos_ind.stop,pos_ind.stop+3)
-    rpy_ind = slice(vel_ind.stop, vel_ind.stop+3)
+    rpy_ind = slice(vel_ind.stop, vel_ind.stop+4)
     dot_rpy_ind = slice(rpy_ind.stop,rpy_ind.stop+3)
     acc_ind = slice(dot_rpy_ind.stop,dot_rpy_ind.stop+3)
     acc_ang_ind = slice(acc_ind.stop,acc_ind.stop+3)
@@ -230,7 +248,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # ASSIGN REFERENCES
     yref[pos_ind]= mut_pos_ref   # distance, pan and tilt
     yref[vel_ind]=v_ref             # velocity
-    yref[rpy_ind]= [0.0,0.0,0.0]          # mutual rotation error rpy
+    yref[rpy_ind]= [1.0,0.0,0.0,0.0]          # mutual rotation error rpy
     yref[dot_rpy_ind]=dot_rpy_ref   # Euler rates
     yref[acc_ind]=acc_ref           # acceleration
     yref[acc_ang_ind]=acc_ang_ref
@@ -241,7 +259,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     #for last tract of trajectoy (task)
     new_ref = yref.copy()
     new_ref[pos_ind]=final_mut_pos_ref
-    new_ref[rpy_ind]=[0.0,0.0,0.0]
+    new_ref[rpy_ind]=[1.0,0.0,0.0,0.0]
 
     #Terminal reference
     yref_e = new_ref[:y_expr_e.numel()]   #p,rpy
@@ -253,7 +271,10 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     ocp.solver_options.nlp_solver_max_iter=200
     ocp_solver = AcadosOcpSolver(ocp)
 
-
+    '''
+                                    REFERENCES AND PARAMETERS 
+                                        ONLINE UPDATE
+    '''
 
     # Definition of cost references (ocp_solver.yref) and substituting pos and ang object values from sym to real
     # together with mutual_rotation_reference
@@ -299,7 +320,7 @@ def extract_trajectory_from_solver(ocp_solver, model, N_horiz, nx, nu):
     #    model.x[3:6]         # v (3)
     #    mut_rot_rpy,         # R_to_RPY (R_obj* R_drone^T)  (3)
     #    model.x[10:13],      # omega (3)
-    #    a_expr,              # acceleration (3)
+    #    acc_expr,              # acceleration (3)
     #    j_expr,              # jerk (3)
     #    s_expr,              # snap (3)
     #    model.u              # control (6)

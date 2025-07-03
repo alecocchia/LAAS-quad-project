@@ -26,46 +26,18 @@ m   = 1.            # [kg] mass
 Ixx, Iyy, Izz = 0.015, 0.015, 0.007 #Inertia
 J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
 
-## Porta angolo in [-pi,pi]
-def wrap_to_pi_sym(angle):
-    two_pi = 2 * ca.pi
-    wrapped = angle - two_pi * ca.floor((angle + ca.pi) / two_pi)
-    wrapped = ca.if_else(angle== -ca.pi, -ca.pi, wrapped)
-    return wrapped
-
-def wrap_to_pi(angle):
-    """
-    Riporta angoli in [-pi, pi] usando NumPy (versione numerica).
-    Supporta anche array numpy.
-    """
-    wrapped = (angle + np.pi) % (2 * np.pi) - np.pi
-    # Corregge il caso limite di -pi (opzionale, simile a if_else in CasADi)
-    wrapped = np.where(np.isclose(wrapped, -np.pi), -np.pi, wrapped)
-    return wrapped
 
 
-def min_angle_sym(alpha) :
-    """
-    Prende il minimo valore angolare in [0,2pi] (utile per distanza angolare effettiva)
-    """    
-    theta = ca.fabs(alpha)
-    alpha_compl = ca.if_else(alpha >= 0, -(2*ca.pi-theta), 2*ca.pi-theta)
-    return ca.if_else(theta <= ca.pi, alpha, alpha_compl)
+#def min_angle_sym(alpha) :
+#    """
+#    Prende il minimo valore angolare in [0,2pi] (utile per distanza angolare effettiva)
+#    """    
+#    theta = ca.fabs(alpha)
+#    alpha_compl = ca.if_else(alpha >= 0, -(2*ca.pi-theta), 2*ca.pi-theta)
+#    return ca.if_else(theta <= ca.pi, alpha, alpha_compl)
 
 def min_angle(alpha) :
-    """
-    Prende il minimo valore angolare in [0,2pi] (utile per distanza angolare effettiva)
-    """    
-    theta = np.abs(alpha)
-    if alpha >= 0 :
-        alpha_compl =  -(2*ca.pi-theta)
-    else :
-        2*ca.pi-theta
-    
-    if theta <= ca.pi :
-        return alpha
-    else :
-        return alpha_compl
+    return ca.atan2(ca.sin(alpha), ca.cos(alpha))
 
 
 # Da angoli RPY a matrice di rotazione
@@ -99,7 +71,7 @@ def R_to_RPY(R):
     Restituisce (roll, pitch, yaw)
     """
     roll   = (ca.atan2(R[2, 1], R[2, 2]))
-    pitch = (-ca.asin(R[2,0]))
+    pitch = ca.atan2(-R[2,0],ca.sqrt(ca.power(R[2,1],2)+ca.power(R[2,2],2)))
     yaw  = (ca.atan2(R[1, 0], R[0, 0]))
 
     
@@ -173,6 +145,66 @@ def RPY_to_quat(roll, pitch, yaw):
     #q = q / ca.norm_2(q)  # Normalizza il quaternione
 
     return q
+
+
+def R_to_quat(R):
+    """
+    Convert a 3x3 CasADi rotation matrix to quaternion [w, x, y, z]
+    """
+    trace = R[0,0] + R[1,1] + R[2,2]
+
+    def branch0():
+        S = ca.sqrt(trace + 1.0) * 2
+        return ca.vertcat(
+            0.25 * S,
+            (R[2,1] - R[1,2]) / S,
+            (R[0,2] - R[2,0]) / S,
+            (R[1,0] - R[0,1]) / S
+        )
+
+    def branch1():
+        S = ca.sqrt(1.0 + R[0,0] - R[1,1] - R[2,2]) * 2
+        return ca.vertcat(
+            (R[2,1] - R[1,2]) / S,
+            0.25 * S,
+            (R[0,1] + R[1,0]) / S,
+            (R[0,2] + R[2,0]) / S
+        )
+
+    def branch2():
+        S = ca.sqrt(1.0 + R[1,1] - R[0,0] - R[2,2]) * 2
+        return ca.vertcat(
+            (R[0,2] - R[2,0]) / S,
+            (R[0,1] + R[1,0]) / S,
+            0.25 * S,
+            (R[1,2] + R[2,1]) / S
+        )
+
+    def branch3():
+        S = ca.sqrt(1.0 + R[2,2] - R[0,0] - R[1,1]) * 2
+        return ca.vertcat(
+            (R[1,0] - R[0,1]) / S,
+            (R[0,2] + R[2,0]) / S,
+            (R[1,2] + R[2,1]) / S,
+            0.25 * S
+        )
+
+    # Conditions (use logic_and instead of &)
+    cond0 = trace > 0.0
+    cond1 = ca.logic_and(R[0,0] > R[1,1], R[0,0] > R[2,2])
+    cond2 = R[1,1] > R[2,2]
+
+    # Nested conditional evaluation
+    q = ca.if_else(cond0, branch0(),
+          ca.if_else(cond1, branch1(),
+          ca.if_else(cond2, branch2(),
+          branch3())))
+
+    # Normalize to ensure unit quaternion
+    q = q / ca.norm_2(q)
+
+    return q
+
 
 #matrice di propagazione quaternione
 def omega_matrix(w):
