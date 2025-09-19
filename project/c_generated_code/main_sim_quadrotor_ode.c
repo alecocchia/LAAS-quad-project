@@ -101,8 +101,6 @@ int main()
     u0[1] = 0.0;
     u0[2] = 0.0;
     u0[3] = 0.0;
-    u0[4] = 0.0;
-    u0[5] = 0.0;
     // set parameters
     double p[NP];
     p[0] = 2;
@@ -113,7 +111,7 @@ int main()
     p[5] = 0;
     p[6] = 0;
     p[7] = 0;
-    p[8] = 2.443460952792061;
+    p[8] = 1.5707963267948966;
 
     quadrotor_ode_acados_sim_update_params(capsule, p, NP);
   

@@ -174,7 +174,7 @@ int quadrotor_ode_acados_sim_create(quadrotor_ode_sim_solver_capsule * capsule)
     
     p[0] = 2;
     p[1] = 2;
-    p[8] = 2.443460952792061;
+    p[8] = 1.5707963267948966;
 
     quadrotor_ode_acados_sim_update_params(capsule, p, np);
     free(p);
@@ -191,16 +191,16 @@ int quadrotor_ode_acados_sim_create(quadrotor_ode_sim_solver_capsule * capsule)
 
 
     // u
-    double u0[6];
-    for (int ii = 0; ii < 6; ii++)
+    double u0[4];
+    for (int ii = 0; ii < 4; ii++)
         u0[ii] = 0.0;
 
     sim_in_set(quadrotor_ode_sim_config, quadrotor_ode_sim_dims,
                quadrotor_ode_sim_in, "u", u0);
 
     // S_forw
-    double S_forw[247];
-    for (int ii = 0; ii < 247; ii++)
+    double S_forw[221];
+    for (int ii = 0; ii < 221; ii++)
         S_forw[ii] = 0.0;
     for (int ii = 0; ii < 13; ii++)
         S_forw[ii + ii * 13 ] = 1.0;

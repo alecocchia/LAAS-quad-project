@@ -75,7 +75,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # initial conditions for constraints
     ocp.constraints.x0 = x0
     # State physical constraints
-    ocp.constraints.lbx = np.array([0] + [-5]*3 + [-np.deg2rad(60)]*3)  # zmin, wmin  
+    ocp.constraints.lbx = np.array([0] + [-5]*3 + [np.deg2rad(-60)]*3)  # zmin, wmin  
     ocp.constraints.ubx = np.array([100] + [5]*3 + [np.deg2rad(60)]*3)  # zmax, wmax
     #ocp.constraints.lbx =  np.array([0])      # zmin
     #ocp.constraints.ubx =  np.array([100] )   # zmax
@@ -83,8 +83,8 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # Control constraints
     Fmax = 40  #more or less 4 times than hovering
     Tmax = 3
-    ocp.constraints.lbu = np.array([-Fmax, -Fmax, -Fmax, -Tmax, -Tmax, -Tmax])
-    ocp.constraints.ubu = np.array([Fmax, Fmax, Fmax, Tmax, Tmax, Tmax])
+    ocp.constraints.lbu = np.array([-Fmax, -Tmax, -Tmax, -Tmax])
+    ocp.constraints.ubu = np.array([Fmax, Tmax, Tmax, Tmax])
     ocp.constraints.idxbu = np.arange(nu)
     # Solver options
     ocp.solver_options.integrator_type = 'ERK'
@@ -125,7 +125,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # Snap = symbolic time derivative of jerk (d/dt(j)= ...)                # valutare se espandere lo stato                               
     s_expr = ca.jacobian(j_expr, model.x) @ xdot             
 ############################################################################################################
-    u_hovering = ca.DM([0, 0, m*g0, 0, 0, 0])
+    u_hovering = ca.DM([m*g0, 0, 0, 0])
     
     # Substitution of u with u_hovering to obtain acc, jerk, snap "at hovering" for last time instant (no dependance on model.u)
     acc_hover = ca.substitute(acc_expr, model.u, u_hovering)
@@ -157,7 +157,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     mutual_R = ca.mtimes(R_drone.T, R_obj)
 
     mutual_R_ref = RPY_to_R(mut_rot_ref[0],mut_rot_ref[1],mut_rot_ref[2])
-    mutual_R_error = ca.mtimes(mutual_R_ref.T, mutual_R)
+    mutual_R_error = ca.mtimes(mutual_R.T, mutual_R_ref)
 
     #mutual_rot_error = [min_angle(R_to_RPY(mutual_R_error))]
     #mutual_rot_rpy = R_to_RPY(mutual_R)
@@ -232,13 +232,13 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # Indexes
     pos_ind = slice(0,3)
     vel_ind = slice(pos_ind.stop,pos_ind.stop+3)
-    rpy_ind = slice(vel_ind.stop, vel_ind.stop+4)
-    dot_rpy_ind = slice(rpy_ind.stop,rpy_ind.stop+3)
+    quat_ind = slice(vel_ind.stop, vel_ind.stop+4)
+    dot_rpy_ind = slice(quat_ind.stop,quat_ind.stop+3)
     acc_ind = slice(dot_rpy_ind.stop,dot_rpy_ind.stop+3)
     acc_ang_ind = slice(acc_ind.stop,acc_ind.stop+3)
     jerk_ind = slice(acc_ang_ind.stop,acc_ang_ind.stop+3)   # cambiare questo se non si include acc_ang
     snap_ind = slice(jerk_ind.stop,jerk_ind.stop+3)
-    u_ind = slice(snap_ind.stop,snap_ind.stop+6)
+    u_ind = slice(snap_ind.stop,snap_ind.stop+4)
     
     # initialization of cost references for state and input 
     # over prediction horizon and last time istant
@@ -248,7 +248,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     # ASSIGN REFERENCES
     yref[pos_ind]= mut_pos_ref   # distance, pan and tilt
     yref[vel_ind]=v_ref             # velocity
-    yref[rpy_ind]= [1.0,0.0,0.0,0.0]          # mutual rotation error rpy
+    yref[quat_ind]= [1.0,0.0,0.0,0.0]          # mutual rotation error rpy
     yref[dot_rpy_ind]=dot_rpy_ref   # Euler rates
     yref[acc_ind]=acc_ref           # acceleration
     yref[acc_ang_ind]=acc_ang_ref
@@ -259,7 +259,7 @@ def configure_ocp(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     #for last tract of trajectoy (task)
     new_ref = yref.copy()
     new_ref[pos_ind]=final_mut_pos_ref
-    new_ref[rpy_ind]=[1.0,0.0,0.0,0.0]
+    new_ref[quat_ind]=[1.0,0.0,0.0,0.0]
 
     #Terminal reference
     yref_e = new_ref[:y_expr_e.numel()]   #p,rpy

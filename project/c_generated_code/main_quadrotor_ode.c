@@ -127,8 +127,6 @@ int main()
     u0[1] = 0.0;
     u0[2] = 0.0;
     u0[3] = 0.0;
-    u0[4] = 0.0;
-    u0[5] = 0.0;
 
     // prepare evaluation
     int NTIMINGS = 1;
