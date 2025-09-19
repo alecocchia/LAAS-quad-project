@@ -541,71 +541,85 @@ def traj_plot3D_animated_with_orientation(t, drone_pos, drone_rot, obj_pos, obj_
     - obj_pos: (N,3) posizioni oggetto
     - obj_rot: (N,3) RPY oggetto
     - interval: intervallo animazione [ms]
-    - step: passo frame
+    - step: passo frame (>=1). Aumenta per alleggerire l'animazione.
     """
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    # Limiti globali per tutti i dati
+    # Limiti globali con scala uguale su X,Y,Z
     all_pos = np.vstack([drone_pos, obj_pos])
-    ax.set_xlim(np.min(all_pos[:, 0]), np.max(all_pos[:, 0]))
-    ax.set_ylim(np.min(all_pos[:, 1]), np.max(all_pos[:, 1]))
-    ax.set_zlim(np.min(all_pos[:, 2]), np.max(all_pos[:, 2]))
+    mins = all_pos.min(axis=0)
+    maxs = all_pos.max(axis=0)
+    cent = 0.5*(mins + maxs)
+    rng  = float((maxs - mins).max())  # lato del cubo che contiene tutto
+    if rng <= 0:
+        rng = 1.0  # fallback
+    ax.set_xlim(cent[0] - rng/2, cent[0] + rng/2)
+    ax.set_ylim(cent[1] - rng/2, cent[1] + rng/2)
+    ax.set_zlim(cent[2] - rng/2, cent[2] + rng/2)
+    try:
+        ax.set_box_aspect((1, 1, 1))  # matplotlib >= 3.3
+    except Exception:
+        pass
 
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title('Animazione con orientamento')
-    ax.legend()
+    ax.set_xlabel('X [m]')
+    ax.set_ylabel('Y [m]')
+    ax.set_zlabel('Z [m]')
 
-    # Linee traiettorie
-    drone_line, = ax.plot([], [], [], 'r-', label='Drone Trajectory', linewidth=2)
-    obj_line, = ax.plot([], [], [], 'b-', label='Object Trajectory', linewidth=2)
+    # Linee delle traiettorie
+    drone_line, = ax.plot([], [], [], 'b-', label='Drone', linewidth=2)
+    obj_line,   = ax.plot([], [], [], 'k--', label='Object', linewidth=1.5)
 
-    # Linee per assi (3 per drone + 3 per oggetto)
-    drone_axes_lines = [ax.plot([], [], [], color=c)[0] for c in ['r', 'g', 'b']]
-    obj_axes_lines = [ax.plot([], [], [], color=c)[0] for c in ['r', 'g', 'b']]
+    # Inizializza le 3 terne (3 linee per drone e 3 per oggetto)
+    drone_axes_lines = [ax.plot([], [], [], color=c, linewidth=1.5)[0] for c in ['r', 'g', 'b']]
+    obj_axes_lines   = [ax.plot([], [], [], color=c, linewidth=1.5)[0] for c in ['r', 'g', 'b']]
 
-    ax.legend()
+    ax.legend(loc='upper right')
+
+    # Lunghezza delle terne scalata al bounding box (10% del lato)
+    axis_len = 0.10 * rng
+
+    # Assicurati che step sia almeno 1
+    step = max(1, int(step))
 
     def plot_axes(origin, R, length=0.5):
         """
         Restituisce liste di punti per ogni asse da disegnare.
+        origin: (3,) ; R: (3,3) con colonne = assi X,Y,Z
         """
-        ends = origin[:,None] + R * length  # broadcasting: (3,3) * scalar
-        # ends shape (3,3) = 3 vettori asse, colonne: assi X,Y,Z
+        origin = np.asarray(origin).reshape(3)
+        ends = origin[:, None] + R * float(length)  # (3,3)
         return [(origin, ends[:, i]) for i in range(3)]
 
     def update(frame):
         i = min(frame * step, len(t) - 1)
 
-        # Aggiorna traiettorie
+        # aggiorna linee traiettoria
         drone_line.set_data(drone_pos[:i + 1, 0], drone_pos[:i + 1, 1])
         drone_line.set_3d_properties(drone_pos[:i + 1, 2])
-
         obj_line.set_data(obj_pos[:i + 1, 0], obj_pos[:i + 1, 1])
         obj_line.set_3d_properties(obj_pos[:i + 1, 2])
 
-        # Aggiorna assi drone
+        # assi drone
         origin = drone_pos[i]
-        R = RPY_to_R(drone_rot[i,0],drone_rot[i,1],drone_rot[i,2]).full()
+        R_drone = RPY_to_R(drone_rot[i, 0], drone_rot[i, 1], drone_rot[i, 2]).full()
         for idx, line in enumerate(drone_axes_lines):
-            start, end = plot_axes(origin, R, length=1)[idx]
+            start, end = plot_axes(origin, R_drone, length=axis_len)[idx]
             line.set_data([start[0], end[0]], [start[1], end[1]])
             line.set_3d_properties([start[2], end[2]])
 
-        # Aggiorna assi oggetto
+        # assi oggetto
         origin = obj_pos[i]
-        R = RPY_to_R(obj_rot[i,0],obj_rot[i,1],obj_rot[i,2]).full()
+        R_obj = RPY_to_R(obj_rot[i, 0], obj_rot[i, 1], obj_rot[i, 2]).full()
         for idx, line in enumerate(obj_axes_lines):
-            start, end = plot_axes(origin, R, length=1)[idx]
+            start, end = plot_axes(origin, R_obj, length=axis_len)[idx]
             line.set_data([start[0], end[0]], [start[1], end[1]])
             line.set_3d_properties([start[2], end[2]])
 
-        # Ritorna linee per aggiornamento
         return [drone_line, obj_line] + drone_axes_lines + obj_axes_lines
 
+    # Numero di frame
     n_frames = len(t) // step + 1
     ani = FuncAnimation(fig, update, frames=n_frames, interval=interval, blit=False)
 
