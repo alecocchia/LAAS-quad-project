@@ -1,7 +1,7 @@
 {
-    "acados_include_path": "/home/acocchia/Downloads/acados/include",
-    "acados_lib_path": "/home/acocchia/Downloads/acados/lib",
-    "code_export_directory": "/home/acocchia/2025-acocchia/project/c_generated_code",
+    "acados_include_path": "/home/aleco/acados/include",
+    "acados_lib_path": "/home/aleco/acados/lib",
+    "code_export_directory": "/home/aleco/Internship/2025-acocchia/project/c_generated_code",
     "constraints": {
         "C": [],
         "C_e": [],
@@ -2771,8 +2771,8 @@
         "zu_e": []
     },
     "cython_include_dirs": [
-        "/home/acocchia/venv/lib/python3.12/site-packages/numpy/_core/include",
-        "/usr/include/python3.12"
+        "/home/aleco/venv/lib/python3.8/site-packages/numpy/core/include",
+        "/usr/include/python3.8"
     ],
     "dims": {
         "N": 100,
