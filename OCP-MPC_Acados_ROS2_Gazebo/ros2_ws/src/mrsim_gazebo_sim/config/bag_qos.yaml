@@ -1,0 +1,13 @@
+defaults: &qos_common
+  history: keep_all
+  reliability: reliable
+  durability: volatile
+
+/peg_pose:               *qos_common
+/peg_path:               *qos_common
+/optimal_drone_pose:     *qos_common
+/optimal_drone_twist:    *qos_common
+/optimal_wrench:         *qos_common
+/odometry:               *qos_common
+/wrench_cmd:             *qos_common
+/clock:                  *qos_common
