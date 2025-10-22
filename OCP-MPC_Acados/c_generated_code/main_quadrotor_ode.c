@@ -71,7 +71,6 @@ int main()
     ocp_nlp_out *nlp_out = quadrotor_ode_acados_get_nlp_out(acados_ocp_capsule);
     ocp_nlp_solver *nlp_solver = quadrotor_ode_acados_get_nlp_solver(acados_ocp_capsule);
     void *nlp_opts = quadrotor_ode_acados_get_nlp_opts(acados_ocp_capsule);
-
     // initial condition
     double lbx0[NBX0];
     double ubx0[NBX0];

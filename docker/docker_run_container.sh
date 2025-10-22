@@ -15,13 +15,39 @@ fi
 IMAGE_NAME="$1"
 CONTAINER_NAME="${2:-Gaetano}"   # Se non viene passato, usa "Gaetano"
 
+# percorso root del progetto 
+HOST_PROJECT_ROOT="/home/${USER}/LAAS-quad-project"
+
+# cerca la prima cartella chiamata ros2_ws nel sottoalbero del progetto
+FOUND_ROS2_WS=$(find "$HOST_PROJECT_ROOT" -type d -name "ros2_ws" -print -quit)
+
+# se non la trovi nel progetto, prova a cercare in tutta la home (opzionale)
+if [ -z "$FOUND_ROS2_WS" ]; then
+    echo "ros2_ws non trovato sotto $HOST_PROJECT_ROOT — cerco in /home/${USER}..."
+    FOUND_ROS2_WS=$(find "/home/${USER}" -type d -name "ros2_ws" -print -quit)
+fi
+
+if [ -z "$FOUND_ROS2_WS" ]; then
+    echo "Errore: ros2_ws non trovato."
+    # gestisci l'errore come preferisci
+else
+    echo "Trovato ros2_ws in: $FOUND_ROS2_WS"
+fi
+
+
 HOST_ROS2_WS_FOLDER="ros2_ws"
 HOST_ROS2_SRC_FOLDER="${HOST_ROS2_WS_FOLDER}/src"
 
 # Percorso completo della cartella di sviluppo ROS 2 sull'host
-HOST_ROS2_WS_PATH="/home/$USER/$HOST_ROS2_WS_FOLDER"
-HOST_ROS2_SRC_PATH="$HOST_ROS2_WS_PATH/src"
+HOST_ROS2_WS_PATH="$FOUND_ROS2_WS"
+HOST_ROS2_SRC_PATH="${HOST_ROS2_WS_PATH}/src"
 
+HOST_PROJECT_PATH="/home/${USER}/LAAS-quad-project"
+HOST_OCP="${HOST_PROJECT_PATH}/OCP-MPC_Acados"
+echo "${HOST_OCP}"
+
+# Percorso della simulazione fully ACADOS nel container
+CONTAINER_ACADOS_OCP_PATH="/home/user/OCP-MPC_Acados"
 # Percorso della workspace ROS 2 all'interno del container
 CONTAINER_ROS2_WS_PATH="/home/user/${HOST_ROS2_WS_FOLDER}"
 CONTAINER_ROS2_SRC_PATH="$CONTAINER_ROS2_WS_PATH/src"
@@ -39,6 +65,11 @@ fi
 if [ ! -d "$HOST_BAG_FILES_PATH" ]; then
     echo "[INFO] Cartella per i file bag '$HOST_BAG_FILES_PATH' non trovata, creandone una nuova."
     mkdir -p "$HOST_BAG_FILES_PATH"
+fi
+
+if [ ! -d "${HOST_OCP}" ]; then
+    echo "[ERROR] La cartella '${HOST_OCP}' non esiste sul host. Controlla il percorso."
+    exit 1
 fi
 
 # Configurazione per X11 forwarding
@@ -80,6 +111,7 @@ docker run -it --rm \
     -v /dev/dri:/dev/dri \
     -v "${HOST_ROS2_SRC_PATH}:${CONTAINER_ROS2_SRC_PATH}" \
     -v "${HOST_BAG_FILES_PATH}:${CONTAINER_BAG_FILES_PATH}" \
+    -v "${HOST_OCP}:${CONTAINER_ACADOS_OCP_PATH}" \
     --workdir="${CONTAINER_ROS2_WS_PATH}" \
     -e QT_X11_NO_MITSHM=1 \
     -e IGN_GAZEBO_RESOURCE_PATH="${GZ_RESOURCE_PATH}" \

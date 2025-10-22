@@ -80,8 +80,8 @@ OBJ+= $(OCP_OBJ)
 EXTERNAL_DIR=
 EXTERNAL_LIB=
 
-INCLUDE_PATH = /home/acocchia/Downloads/acados/include
-LIB_PATH = /home/acocchia/Downloads/acados/lib
+INCLUDE_PATH = /opt/acados/include
+LIB_PATH = /opt/acados/lib
 
 # preprocessor flags for make's implicit rules
 CPPFLAGS+= -I$(INCLUDE_PATH)
@@ -141,17 +141,18 @@ ocp_cython_c: ocp_shared_lib
 	-o acados_ocp_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_ocp_solver_pyx.pyx \
-	-I /home/acocchia/2025-acocchia/c_generated_code \
+	-I /home/user/OCP-MPC_Acados/c_generated_code \
 
 ocp_cython_o: ocp_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
 	-fPIC \
+	-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION \
 	-o acados_ocp_solver_pyx.o \
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/acocchia/venv/lib/python3.12/site-packages/numpy/_core/include \
-	-I /usr/include/python3.12 \
+	-I /usr/lib/python3/dist-packages/numpy/core/include \
+	-I /usr/include/python3.10 \
 	acados_ocp_solver_pyx.c \
 
 ocp_cython: ocp_cython_o
@@ -169,17 +170,18 @@ sim_cython_c: sim_shared_lib
 	-o acados_sim_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_sim_solver_pyx.pyx \
-	-I /home/acocchia/2025-acocchia/c_generated_code \
+	-I /home/user/OCP-MPC_Acados/c_generated_code \
 
 sim_cython_o: sim_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
 	-fPIC \
+	-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION \
 	-o acados_sim_solver_pyx.o \
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/acocchia/venv/lib/python3.12/site-packages/numpy/_core/include \
-	-I /usr/include/python3.12 \
+	-I /usr/lib/python3/dist-packages/numpy/core/include \
+	-I /usr/include/python3.10 \
 	acados_sim_solver_pyx.c \
 
 sim_cython: sim_cython_o
