@@ -28,19 +28,19 @@ source install/setup.bash
      - select container that is currently running
      - impose reference with:
          ros2 topic pub -1 /human_goal_vec std_msgs/msg/Float64MultiArray "{data: [radius, dist[m], azimuth[rad], polar angle[rad]}"
-    This reference is meant to be the one between drone and object with respect to the drone PoV.
+    - This reference is meant to be the one between drone and object with respect to the drone PoV.
 
   # Logger
     This node acts as logger -> it listens to and saves simulation results over log_file specified in launchfile
 
 ## Results 
   # plot_script.py
-    Just run it on python. It shows results saved in log_file. More quantities should be saved and shown (acc, jerk, etc.)
+    - Just run it on python. It shows results saved in log_file. More quantities should be saved and shown (acc, jerk, etc.)
   # ros_bag_plotter.py
-    It is thought for bag_files plotting, but rosbag has not be used.
+    - It is thought for bag_files plotting, but rosbag has not be used.
 
 ## Utility files
-  common.py, drone_model.py, drone_MPC_settings.py, drone_OCP_settings.py, drone_simulation.py
-    These are included by main scripts (es. MPC_planner_node.py or ocp_planner_node.py)
+  - common.py, drone_model.py, drone_MPC_settings.py, drone_OCP_settings.py, drone_simulation.py
+    - These are included by main scripts (es. MPC_planner_node.py or ocp_planner_node.py)
          
      
