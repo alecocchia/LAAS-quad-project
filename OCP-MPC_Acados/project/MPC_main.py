@@ -3,10 +3,6 @@ from drone_MPC_settings import *
 from casadi import pi as pi
 
 
-################ RIPARTIRE DA: CAPIRE BENE BENE IL CODICE, ESPORTARE IN ROS DOVE ANDRA' GESTITO DINAMICAMENTE IL CAMBIO DI RIFERIMENTO TRAMITE TOPIC
-################ CONFRONTARE PLOT CASO OCP E CASO MPC E VEDERE SE CI SONO DIFFERENZE
-
-
 def build_yref_online(y_idx, ref_vec):
     yref = np.zeros(y_idx["u"].stop) # dimensione di y_expr (fino a u)
     # crea array lungo quanto y_expr
@@ -96,16 +92,7 @@ def main():
     U_F = 40        # N
     U_TAU = 0.3       # N*m    
 
-    # Weights construction
-    #Q_pos = np.diag([20 / (D**2), 20 / (PANTILT**2), 20 / (PANTILT**2)])
-    #Q_vel = np.diag([1]*3)/V**2
-    #Q_rot = np.diag([10, 10, 5])/ANG**2
-    #Q_ang_dot = np.diag([0]*3)/ANG_DOT**2
-    #Q_acc = np.diag([0.1]*3)/ACC**2
-    #Q_acc_ang = np.diag([0]*3)/ACC_ANG**2
-    #Q_jerk = np.diag([0.2]*3)/JERK**2
-    #Q_snap = np.diag([0.2]*3)/SNAP**2
-
+    # Weights 
     Q_pos = np.diag([10 / (D**2), 10 / (PANTILT**2), 10 / (PANTILT**2)])
     Q_vel = np.diag([2]*3)/V**2
     Q_rot = np.diag([1, 5, 5, 5])/ANG**2

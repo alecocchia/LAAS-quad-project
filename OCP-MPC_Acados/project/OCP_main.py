@@ -39,9 +39,9 @@ def main():
     '''
                                             REFERENCES
     '''
-    # Mutual position and orientation references
+    # Mutual position and orientation references in spherical coordinates
     radius = 2
-    mut_pos_ref = np.array([radius, 0.0, 0.0]) # distance, pan and tilt
+    mut_pos_ref = np.array([radius, 0.0, 0.0]) # distance, pan (azimuth) and tilt (polar angle)
     mut_rot_ref = np.array([0, 0, pi/2])     # rad
 
     # Task
@@ -70,16 +70,7 @@ def main():
     U_F = 40        # N
     U_TAU = 0.3       # N*m    
 
-    # Weights construction
-    #Q_pos = np.diag([20 / (D**2), 20 / (PANTILT**2), 20 / (PANTILT**2)])
-    #Q_vel = np.diag([1]*3)/V**2
-    #Q_rot = np.diag([10, 10, 5])/ANG**2
-    #Q_ang_dot = np.diag([0]*3)/ANG_DOT**2
-    #Q_acc = np.diag([0.1]*3)/ACC**2
-    #Q_acc_ang = np.diag([0]*3)/ACC_ANG**2
-    #Q_jerk = np.diag([0.2]*3)/JERK**2
-    #Q_snap = np.diag([0.2]*3)/SNAP**2
-
+    # Weights 
     Q_pos = np.diag([10 / (D**2), 10 / (PANTILT**2), 10 / (PANTILT**2)])
     Q_vel = np.diag([2]*3)/V**2
     Q_rot = np.diag([1, 5, 5, 5])/ANG**2
