@@ -4,5 +4,5 @@
 
 Notes:
 - Hierarchical PID controller still not working correctly
-- With OCP planner a reference change from pi/2 to pi still sometimes is taken as longest distance (pi/2 -> -pi)
+- With OCP planner a reference change from pi/2 to pi sometimes is still taken as longest distance (pi/2 -> -pi)
 - Still is needed to interpolate human reference with dynamical planner reference in MPC mode 
