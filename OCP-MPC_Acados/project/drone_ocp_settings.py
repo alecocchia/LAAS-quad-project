@@ -1,7 +1,7 @@
 from acados_template import AcadosOcp, AcadosOcpSolver
 from drone_model import *
 from common import *
-from planner import *
+from trapez_traj_gen import *
 from scipy.linalg import solve_continuous_are
 import numpy as np
 import casadi as ca
