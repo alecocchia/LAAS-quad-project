@@ -9,13 +9,15 @@
       <magnetic_field>23.816e-6 -0.41e-6 -39.829e-6</magnetic_field>
     </physics>
     
+  
     <!--
     <plugin filename="libignition-gazebo6-scene-broadcaster-system.so"
             name="ignition::gazebo::systems::SceneBroadcaster">
     </plugin>
     
+    
     <plugin name="ignition::gazebo::systems::Sensors" filename="libignition-gazebo-sensors-system.so">
-      <render_engine>ogre</render_engine>
+      <render_engine>ogre2</render_engine>
     </plugin>
     -->
 
@@ -87,20 +89,6 @@
       <static>false</static>  
     </include>
 
-    <!--
-    <gazebo> 
-      <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
-        <render_engine>ogre2</render_engine> 
-      </plugin> 
-    </gazebo>
-    -->
-
-    <!--
-    <plugin filename="libignition-gazebo6-sensors-system.so"
-            name="ignition::gazebo::systems::Sensors">
-            <render_engine>ogre2</render_engine>
-    </plugin>
-    -->
     
     <!--
     <plugin
@@ -109,19 +97,5 @@
     </plugin>
     -->
     
-    <!--
-    <plugin name="optitrack" filename="optitrack-gazebo.so">
-      <hz>100</hz>
-      <port>1509</port>
-      <publish>
-        <link>hr6::base</link>
-        <name>HR_6</name>
-      </publish>
-      <publish>
-        <link>qr4::base</link>
-        <name>QR_4</name>
-      </publish>
-    </plugin>
-    -->
   </world>
 </sdf>
