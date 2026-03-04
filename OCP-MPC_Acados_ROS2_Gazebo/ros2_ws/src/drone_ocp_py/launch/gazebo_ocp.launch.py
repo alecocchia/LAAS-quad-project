@@ -32,7 +32,7 @@ def generate_launch_description():
     )
 
     controller_arg = DeclareLaunchArgument(
-        'controller', default_value='2',
+        'controller', default_value='1',
         description="1=hierarchical (PID_controller) | 2=geometric (geometric_controller)"
     )
     log_file_arg = DeclareLaunchArgument(
@@ -65,11 +65,11 @@ def generate_launch_description():
 
     is_ctrl_1 = IfCondition(PythonExpression([
         "'", controller, "'", " == '1' and ",
-        "'", MPC_controller, "'", " == 'false'"
+        "'", MPC_controller, "'", " == '0'"
     ]))
     is_ctrl_2 = IfCondition(PythonExpression([
         "'", controller, "'", " == '2' and ",
-        "'", MPC_controller, "'", " == 'false'"
+        "'", MPC_controller, "'", " == '0'"
     ]))
 
 
