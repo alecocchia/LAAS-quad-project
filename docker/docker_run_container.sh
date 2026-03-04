@@ -118,7 +118,6 @@ docker run -it --rm \
     -e IGN_GAZEBO_SYSTEM_PLUGIN_PATH="${GZ_PLUGIN_PATH}:/usr/lib/x86_64-linux-gnu/ign-gazebo-6/plugins" \
     -e _COLCON_CD_ROOT="${CONTAINER_ROS2_WS_HOME}" \
     -e LD_LIBRARY_PATH="/opt/acados/lib:${LIBRARY_PATH}:/usr/lib/x86_64-linux-gnu/ign-gazebo-6/plugins:\$LD_LIBRARY_PATH" \
-    ${DOCKER_GPU_ARGS} \
     "${IMAGE_NAME}" \
     bash -l
 
