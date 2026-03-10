@@ -209,12 +209,12 @@ def main():
     # --- (NUOVO) ASSETTO RPY ---
     if rpy.size:
         if pref_rpy.size and not np.isnan(pref_rpy).all():
-            myPlotWithReference(t, [pref_rpy], rpy,
+            myPlotWithReference(t, [np.unwrap(pref_rpy,axis=0)], np.unwrap(rpy,axis=0),
                                 labels=[r"$\phi$ [rad]", r"$\theta$ [rad]", r"$\psi$ [rad]"],
                                 title="Attitude (RPY): reference vs simulation",
                                 ncols=3, use_tex=args.tex)
         else:
-            myPlot(t, rpy,
+            myPlot(t, np.unwrap(rpy),
                    labels=[r"$\phi$ [rad]", r"$\theta$ [rad]", r"$\psi$ [rad]"],
                    title="Attitude (RPY): simulation", ncols=3, use_tex=args.tex)
 
@@ -232,7 +232,7 @@ def main():
 
     # --- YAW ---
     if p.size and pref.size:
-        myPlotWithReference(t, [pref[:, 3]], p[:, 3],
+        myPlotWithReference(t, [np.unwrap(pref[:, 3],axis=0)], np.unwrap(p[:, 3],axis=0),
                             labels=[r"$\psi$ [rad]"],
                             title="Yaw: reference vs simulation",
                             ncols=1, use_tex=args.tex)

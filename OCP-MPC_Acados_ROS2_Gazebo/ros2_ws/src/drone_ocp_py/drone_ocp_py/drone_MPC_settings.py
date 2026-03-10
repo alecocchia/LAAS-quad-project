@@ -35,26 +35,26 @@ def build_yref_terminal(y_idx, ref_vec, ny_e):
 
 
 
-def setup_model():
-    model = export_quadrotor_ode_model()
-    model_rpy = convert_to_rpy_model(model)
+def setup_model(m, Ixx, Iyy, Izz):
+    model = export_quadrotor_ode_model(m, Ixx, Iyy, Izz)
+    model_rpy = convert_to_rpy_model(model, m, Ixx, Iyy, Izz)
     return model, model_rpy
 
-def setup_initial_conditions() :
+def setup_initial_conditions(start_x,start_y,start_z,start_phi,start_theta,start_psi) :
     '''
     Restituisce x0 (dimensione 13) e x0_rpy (dimensione 12) in posa iniziale 'origine'
     '''
-    xx = 0
-    y =  0
-    z =  0
+    xx = start_x
+    y =  start_y
+    z =  start_z
     
     vx  = 0
     vy  = 0
     vz  = 0
 
-    roll =  0
-    pitch = 0
-    yaw =   0
+    roll =  start_phi
+    pitch = start_theta
+    yaw =   start_psi
 
     q=Rotation.from_euler('xyz', [roll, pitch, yaw]).as_quat()
     qw,qx,qy,qz = np.roll(q,1)
@@ -84,7 +84,8 @@ def configure_mpc(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
     nx = model.x.rows()
     nu = model.u.rows()
 
-
+    m=model.m
+    
     #prediction horizon time
     N_horiz = int(Tf/ts)
 
@@ -153,10 +154,11 @@ def configure_mpc(model, x0, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(6), 
 ############################################################################################################                   
     #Jerk
     j_expr = ca.jacobian(acc_expr, model.x) @ xdot                
-                                                                            #APPROSSIMAZIONE DERIVATE (non tenendo conto
+    #j_expr= ca.SX.zeros(3,1)                                               #APPROSSIMAZIONE DERIVATE (non tenendo conto
                                                                             # di u e u_dot da cui j e s dipendono)                                           
     # Snap = symbolic time derivative of jerk (d/dt(j)= ...)                # valutare se espandere lo stato                               
-    s_expr = ca.jacobian(j_expr, model.x) @ xdot             
+    s_expr = ca.jacobian(j_expr, model.x) @ xdot
+    #s_expr= ca.SX.zeros(3,1)             
 ############################################################################################################
     u_hovering = ca.DM([m*g0, 0, 0, 0])
     

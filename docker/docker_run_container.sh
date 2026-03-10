@@ -96,6 +96,15 @@ CONTAINER_ROS2_WORLDS="${CONTAINER_ROS2_SIM}/worlds"
 GZ_RESOURCE_PATH="${CONTAINER_ROS2_MODELS}:${CONTAINER_ROS2_WORLDS}:${CONTAINER_ROS2_WS_SRC}"
 GZ_PLUGIN_PATH="${CONTAINER_ROS2_WS_INSTALL}/mrsim_gazebo_sim/lib/mrsim_gazebo_sim"
 LIBRARY_PATH="${GZ_PLUGIN_PATH}"
+# Percorsi per la cache di Gazebo Fuel
+HOST_IGNITION_FUEL_PATH="/home/${USER}/LAAS-quad-project/.ignition"
+CONTAINER_IGNITION_FUEL_PATH="/home/user/.ignition"
+
+# Controlla se la cartella per Ignition Fuel sull'host esiste, altrimenti creala
+if [ ! -d "$HOST_IGNITION_FUEL_PATH" ]; then
+    echo "[INFO] Cartella per la cache di Gazebo Fuel '$HOST_IGNITION_FUEL_PATH' non trovata, creandone una nuova."
+    mkdir -p "$HOST_IGNITION_FUEL_PATH"
+fi
 
 # --- Avvio del container Docker ---
 echo "Avvio del container Docker '${CONTAINER_NAME}' dall'immagine '${IMAGE_NAME}'..."
@@ -104,6 +113,7 @@ docker stop "${CONTAINER_NAME}" &> /dev/null
 docker rm "${CONTAINER_NAME}" &> /dev/null
 
 docker run -it --rm \
+    ${DOCKER_GPU_ARGS} \
     --name="${CONTAINER_NAME}" \
     --net=host \
     -e DISPLAY="${DISPLAY}" \
@@ -112,6 +122,7 @@ docker run -it --rm \
     -v "${HOST_ROS2_SRC_PATH}:${CONTAINER_ROS2_SRC_PATH}" \
     -v "${HOST_BAG_FILES_PATH}:${CONTAINER_BAG_FILES_PATH}" \
     -v "${HOST_OCP}:${CONTAINER_ACADOS_OCP_PATH}" \
+    -v "${HOST_IGNITION_FUEL_PATH}:${CONTAINER_IGNITION_FUEL_PATH}" \
     --workdir="${CONTAINER_ROS2_WS_PATH}" \
     -e QT_X11_NO_MITSHM=1 \
     -e IGN_GAZEBO_RESOURCE_PATH="${GZ_RESOURCE_PATH}" \

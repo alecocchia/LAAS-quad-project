@@ -11,10 +11,11 @@
     
 
     <!--
-    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+    <plugin filename="libignition-gazebo6-sensors-system" name="ignition::gazebo::systems::Sensors">
       <render_engine>ogre2</render_engine>
     </plugin>
     -->
+    
 
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
@@ -30,6 +31,8 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
 
+
+    <!--
     <model name="ground_plane">
       <static>true</static>
       <link name="link">
@@ -56,12 +59,81 @@
         </visual>
       </link>
     </model>
+    -->
+
+    <!--
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Truss bridge</uri>
+      <name>bridge</name>
+      <static>true</static>
+      <pose>10.0 10.0 5.0 0.0 0.0 0.0</pose>
+    </include>
+    -->
+
+    <!--
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Sky</uri>
+      <name>my_sky_HD</name>
+    </include>
+    
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Radio tower</uri>
+      <name>Radio_tower</name>
+      <pose>5 5 0 0 0 0</pose>
+    </include>
+    -->
+
+    <!--
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/nathan_benderson_park</uri>
+      <name>Parco</name>
+    </include>
+    -->
+
+    <!--
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Lake House</uri>
+    </include>
+    -->
+    <!-- QUESTO E' UN MONDO
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/desire/worlds/ports</uri>
+      <name>porto</name>
+    </include>
+    -->
+
+  <!--
+  <include>
+    <uri>https://fuel.gazebosim.org/1.0/Fortak123/models/baylands_terrain</uri>
+  </include>
+  -->
+
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Sky</uri>
+    </include>
+
+    <!--
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Asphalt Plane</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+    -->
+    <!--
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Ground Plane</uri>
+    </include>
+    -->
+    
+    <include>
+      <uri>model://Coast Water</uri>
+      <name>my_sea</name>
+    </include>
 
     <include>
       <uri>model://peg</uri>
       <name>my_peg</name>
       <static>true</static>
-      <pose>2.0 2.0 0.5 0.0 0.0 0.0</pose>
+      <pose>2.0 2.0 20 0.0 0.0 0.0</pose>
     </include>
     
     <!--
@@ -74,7 +146,7 @@
     <include>
       <uri>model://mrsim-quad-unico</uri>
       <name>qr4</name>
-      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+      <pose>0.0 0.0 20.0 0.0 0.0 0.0</pose>
       <static>false</static>  
     </include>
 

@@ -16,10 +16,31 @@ class PegPlannerNode(Node):
         self.Tf = 20.0
         self.ts = 0.005
 
-        p_obj_in = np.array([2 , 2 , 0.5])
-        p_obj_f  = np.array([5, 5, 10.5])
-        rot_obj_in = np.array([0,0,0])
-        rot_obj_f  = np.array([0,0,0])
+        # --- Dichiarazione parametri ---
+        self.declare_parameter('peg_start_x', 2.0)
+        self.declare_parameter('peg_start_y', 2.0)
+        self.declare_parameter('peg_start_z', 0.5)
+        self.declare_parameter('peg_start_roll',0.0)
+        self.declare_parameter('peg_start_pitch',0.0)
+        self.declare_parameter('peg_start_yaw',0.0)
+
+        # --- Lettura dei valori da launchfile ---
+        peg_x = self.get_parameter('peg_start_x').value
+        peg_y = self.get_parameter('peg_start_y').value
+        peg_z = self.get_parameter('peg_start_z').value
+        peg_roll = self.get_parameter('peg_start_roll').value
+        peg_pitch = self.get_parameter('peg_start_pitch').value
+        peg_yaw = self.get_parameter('peg_start_yaw').value
+
+        self.p_obj_in = np.array([peg_x, peg_y, peg_z])
+        self.rot_obj_in = np.array([peg_roll, peg_pitch, peg_yaw])
+        
+        self.get_logger().info(f"Peg posizionato correttamente in: {self.p_obj_in}")
+
+        p_obj_in = np.array([peg_x , peg_y , peg_z])
+        p_obj_f  = np.array([peg_x+3, peg_y+3, peg_z+10])
+        rot_obj_in = np.array([peg_roll,peg_pitch,peg_yaw])
+        rot_obj_f  = np.array([peg_roll,peg_pitch,peg_yaw])
 
         ref_obj_in = np.concatenate([p_obj_in, rot_obj_in])
         ref_obj_f  = np.concatenate([p_obj_f,  rot_obj_f])
