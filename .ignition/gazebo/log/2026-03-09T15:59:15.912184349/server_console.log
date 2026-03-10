@@ -1,0 +1,5 @@
+(2026-03-09T15:59:16.21099429) (2026-03-09T15:59:16.21106844) [Msg] Ignition Gazebo Server v6.17.0
+(2026-03-09T15:59:16.23889231) (2026-03-09T15:59:16.23899501) [Msg] Loading SDF world file[/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world].
+(2026-03-09T15:59:16.90870461) (2026-03-09T15:59:16.90879372) [Wrn] [LocalCache.cc:162] Server directory does not exist [/home/user/.ignition/fuel/fuel.ignitionrobotics.org]
+(2026-03-09T15:59:16.190158929) (2026-03-09T15:59:16.190174601) [Err] [Server.cc:139] Error Code 13: [/sdf/world[@name="mrsim"]/include[0]/uri:/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world:L98]: Msg: Unable to resolve uri[https://fuel.gazebosim.org/1.0/desire/worlds/ports] to model path [/home/user/.ignition/fuel/fuel.gazebosim.org/desire/worlds/ports/1] since it does not contain a model.config file.
+(2026-03-09T15:59:16.190674172) (2026-03-09T15:59:16.190682215) [Dbg] [gz.cc:410] Shutting down ign-gazebo-server

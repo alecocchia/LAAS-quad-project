@@ -22,6 +22,7 @@ from std_msgs.msg import Bool, String
 import numpy as np
 import casadi as ca
 from casadi import pi as pi
+from scipy.spatial.transform import Rotation
 
 from drone_ocp_py.drone_MPC_settings import (
     setup_model, setup_initial_conditions, configure_mpc, set_initial_state, build_yref_online, build_yref_terminal
@@ -36,13 +37,43 @@ class MpcPlannerNode(Node):
         super().__init__('mpc_planner_node')
 
         # === Modello e condizioni iniziali (coerenti con OCP) ===
-        self.model, self.model_rpy = setup_model()
-        self.x0, self.x0_rpy = setup_initial_conditions()
+        # --- 1. Dichiarazione e Lettura Parametri da Launch File ---
+        self.declare_parameter('mass', 1.28)
+        self.declare_parameter('ixx', 0.023)
+        self.declare_parameter('iyy', 0.023)
+        self.declare_parameter('izz', 0.022)
+        self.declare_parameter('cf', 8.0e-4) # Valori di default di sicurezza
+        self.declare_parameter('ct', 1.0e-5)
+        self.declare_parameter('start_x', 0.0)
+        self.declare_parameter('start_y', 0.0)
+        self.declare_parameter('start_z', 0.0)
+        self.declare_parameter('start_roll', 0.0)
+        self.declare_parameter('start_pitch', 0.0)
+        self.declare_parameter('start_yaw', 0.0)
+
+        mass = self.get_parameter('mass').value
+        ixx = self.get_parameter('ixx').value
+        iyy = self.get_parameter('iyy').value
+        izz = self.get_parameter('izz').value
+        start_x = self.get_parameter('start_x').value
+        start_y = self.get_parameter('start_y').value
+        start_z = self.get_parameter('start_z').value
+        start_roll = self.get_parameter('start_roll').value
+        start_pitch = self.get_parameter('start_pitch').value
+        start_yaw = self.get_parameter('start_yaw').value
+
+        self.get_logger().info(f"Ricevuta posizione iniziale drone: X={start_x}, Y={start_y}, Z={start_z}, R={start_roll}, P={start_pitch},Y={start_yaw}")
+        self.get_logger().info(f"Parametri SDF caricati: m={mass}, I=[{ixx}, {iyy}, {izz}]")
+
+        # --- 2. Passaggio dei parametri al modello ---
+        self.model, self.model_rpy = setup_model(mass, ixx, iyy, izz)
+        
+        self.x0, self.x0_rpy = setup_initial_conditions(start_x,start_y,start_z,start_roll,start_pitch,start_yaw)
 
         # === Tempo/Orizzonte (coerenti con OCP) ===
         self.Tf = 20.0
         self.Tp = 2 # tempo di predizione (finestra MPC)
-        self.ts = 0.02
+        self.ts = 0.05  # MPC va a 1/0.05 = 20 Hz
         self.ts_peg = 0.005
         self.N_horiz = int(self.Tf / self.ts)
 
@@ -66,7 +97,7 @@ class MpcPlannerNode(Node):
         # === Riferimenti mutual iniziali (come OCP) ===
         radius = 2.0
         mut_pos_ref = np.array([radius, 0.0, 0.0])   # [r, pan, tilt]
-        mut_rot_ref = np.array([0.0, 0.0, pi/2])     # rpy
+        mut_rot_ref = np.array([0.0, 0.0, pi])     # rpy
         mut_pos_final_ref = np.array([radius, 0.0, 0.0])
         mut_rot_final_ref = np.array([0.0, 0.0, pi])
 
@@ -75,7 +106,7 @@ class MpcPlannerNode(Node):
         self.current_ref = self.ref.copy()  # aggiornabile via /human_goal
 
         # --- parametro: durata override umana (s) ---
-        self.declare_parameter('human_hold_ref', 2.0)
+        self.declare_parameter('human_hold_ref', 5.0)
         self.declare_parameter('control_flag',  1)  # 1 -> MPC controller on, 0 -> MPC controller off
 
         control_flag = self.get_parameter('control_flag').get_parameter_value().integer_value
@@ -257,22 +288,26 @@ class MpcPlannerNode(Node):
         ACC = 6; ACC_ANG = 200; JERK = 20; SNAP = 200
         U_F = 40; U_TAU = 0.3
 
-        Q_pos = np.diag([10 / (D**2), 10 / (PANTILT**2), 10 / (PANTILT**2)])
-        Q_vel = np.diag([5]*3) / V**2
-        Q_rot = np.diag([1, 5, 5, 5]) / ANG**2
-        Q_ang_dot = np.diag([3,3,4]) / ANG_DOT**2
+        Q_pos = np.diag([20 / (D**2), 20 / (PANTILT**2), 20 / (PANTILT**2)])
+        Q_vel = np.diag([1,1,1]) / V**2
+        Q_rot = np.diag([1, 3, 3, 3]) / ANG**2  
+        Q_ang_dot = np.diag([1,1,5]) / ANG_DOT**2
         Q_acc = np.diag([2]*3) / ACC**2
-        Q_acc_ang = np.diag([2, 2, 2]) / ACC_ANG**2
-        Q_jerk = np.diag([5]*3) / JERK**2
-        Q_snap = np.diag([5]*3) / SNAP**2
+        Q_acc_ang = np.diag([3, 3, 3]) / ACC_ANG**2
+        Q_jerk = np.diag([1]*3) / JERK**2
+        Q_snap = np.diag([2]*3) / SNAP**2
 
-        R_f = np.diag([100]) / U_F**2
-        R_tau = np.diag([10]*3) / U_TAU**2
+        R_f = np.diag([1]) / U_F**2
+        R_tau = np.diag([10, 10, 5]) / U_TAU**2
         R = ca.diagcat(R_f, R_tau)
         Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_acc_ang, Q_jerk, Q_snap)
 
         W   = ca.diagcat(Q, R).full()
         W_e = 10 * Q.full()
+
+        # Adattamento dei ref iniziali a 7 dimensioni per setup_yref_online (r, pan, tilt, qw, qx, qy, qz)
+        dummy_ref = np.concatenate([self.ref[0:3], [1.0, 0.0, 0.0, 0.0]])
+        dummy_final_ref = np.concatenate([self.final_ref[0:3], [1.0, 0.0, 0.0, 0.0]])
 
         (self.ocp_solver,
          self.N_horiz, self.nx, self.nu,
@@ -285,8 +320,8 @@ class MpcPlannerNode(Node):
             ts=self.ts,
             W=W,
             W_e=W_e,
-            ref=self.ref,
-            final_ref=self.final_ref
+            ref=dummy_ref,
+            final_ref=dummy_final_ref
         )
 
         # warm-start
@@ -308,27 +343,47 @@ class MpcPlannerNode(Node):
 
         t0_idx = self.k
         M = len(self.p_obj)
+        
+        q_current = xk[6:10] # Quaternione attuale del drone per il Filtro Emisfero
 
         # aggiorna parametri+yref
         for i in range(self.N_horiz + 1):
             idx = min(t0_idx + i, M - 1)
             p_i   = self.p_obj[idx]
             rpy_i = self.rpy_obj[idx]
-            param = np.concatenate([p_i, rpy_i, online_ref[3:]])  # [p_obj(3), rpy_obj(3), mut_rot_des(3)]
-            self.ocp_solver.set(i, "p", param)
-            if i < self.N_horiz:
-                yref_i = build_yref_online(self.y_idx, online_ref)
-                self.ocp_solver.set(i, "yref", yref_i)
+            mut_rot_des = online_ref[3:6]
+            
+            # Calcolo target assoluto orientamento tramite prodotto di matrici
+            R_obj = Rotation.from_euler('xyz', rpy_i).as_matrix()
+            R_mut = Rotation.from_euler('xyz', mut_rot_des).as_matrix()
+            R_target = R_obj @ R_mut.T
+            
+            # Conversione in quaternione target
+            q_target_scipy = Rotation.from_matrix(R_target).as_quat() # [x,y,z,w]
+            q_target = np.roll(q_target_scipy, 1) # Riordina in [w,x,y,z]
+            
+            # Filtro Emisfero
+            if np.dot(q_current, q_target) < 0:
+                q_target = -q_target
+            
+            ref_vec = np.concatenate([online_ref[0:3], q_target])
 
-        # terminal
-        yref_e = build_yref_online(self.y_idx, online_ref)[:self.ny_e]
-        self.ocp_solver.set(self.N_horiz, "yref", yref_e)
+            param = np.concatenate([p_i, rpy_i, mut_rot_des])  
+            self.ocp_solver.set(i, "p", param)
+            
+            if i < self.N_horiz:
+                yref_i = build_yref_online(self.y_idx, ref_vec)
+                self.ocp_solver.set(i, "yref", yref_i)
+            elif i == self.N_horiz:
+                # terminal
+                yref_e = build_yref_online(self.y_idx, ref_vec)[:self.ny_e]
+                self.ocp_solver.set(self.N_horiz, "yref", yref_e)
 
         # warm-start
-        #for i in range(self.N_horiz):
-        #    self.ocp_solver.set(i, "u", self.u_prev[i])
-        #    self.ocp_solver.set(i, "x", self.x_prev[i])
-        #self.ocp_solver.set(self.N_horiz, "x", self.x_prev[self.N_horiz])
+        for i in range(self.N_horiz):
+            self.ocp_solver.set(i, "u", self.u_prev[i])
+            self.ocp_solver.set(i, "x", self.x_prev[i])
+        self.ocp_solver.set(self.N_horiz, "x", self.x_prev[self.N_horiz])
 
         # solve
         status = self.ocp_solver.solve()

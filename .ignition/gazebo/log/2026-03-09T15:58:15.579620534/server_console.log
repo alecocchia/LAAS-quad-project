@@ -1,0 +1,11 @@
+(2026-03-09T15:58:15.686489159) (2026-03-09T15:58:15.686494450) [Msg] Ignition Gazebo Server v6.17.0
+(2026-03-09T15:58:15.688170744) (2026-03-09T15:58:15.688181647) [Msg] Loading SDF world file[/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world].
+(2026-03-09T15:58:15.737280159) (2026-03-09T15:58:15.737286728) [Wrn] [LocalCache.cc:162] Server directory does not exist [/home/user/.ignition/fuel/fuel.ignitionrobotics.org]
+(2026-03-09T15:58:15.738244735) (2026-03-09T15:58:15.738253008) [Msg] Downloading world [fuel.gazebosim.org/desire/worlds/ports]
+(2026-03-09T15:58:16.378960263) (2026-03-09T15:58:16.378968091) [Dbg] [FuelClient.cc:2002] Downloading from a referral link [https://gz-fuel-resources-production.s3.amazonaws.com/desire/536316b4-e815-4a0a-96d8-2365843538f3/.zips/1.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS5OHIRKDBY6VUUFF%2F20260309%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260309T155816Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=783ad57ef68dd58207a4c7c05b7c9c6de445b58e335567ab04173348f16cc8cd]
+(2026-03-09T15:58:20.551421475) (2026-03-09T15:58:20.551427874) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/desire/worlds/ports/1/island.sdf]
+(2026-03-09T15:58:20.557107344) (2026-03-09T15:58:20.557116006) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/desire/worlds/ports/1/thumbnails/1.png]
+(2026-03-09T15:58:20.557543373) (2026-03-09T15:58:20.557546843) [Msg] Saved world at:
+  /home/user/.ignition/fuel/fuel.gazebosim.org/desire/worlds/ports/1
+(2026-03-09T15:58:20.628539342) (2026-03-09T15:58:20.628547121) [Err] [Server.cc:139] Error Code 13: [/sdf/world[@name="mrsim"]/include[0]/uri:/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world:L98]: Msg: Unable to resolve uri[https://fuel.gazebosim.org/1.0/desire/worlds/ports] to model path [/home/user/.ignition/fuel/fuel.gazebosim.org/desire/worlds/ports/1] since it does not contain a model.config file.
+(2026-03-09T15:58:20.628616359) (2026-03-09T15:58:20.628619873) [Dbg] [gz.cc:410] Shutting down ign-gazebo-server

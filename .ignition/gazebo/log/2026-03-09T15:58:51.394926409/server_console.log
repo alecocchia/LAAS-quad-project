@@ -1,0 +1,4 @@
+(2026-03-09T15:58:51.500722308) (2026-03-09T15:58:51.500729574) [Msg] Ignition Gazebo Server v6.17.0
+(2026-03-09T15:58:51.503264794) (2026-03-09T15:58:51.503275507) [Msg] Loading SDF world file[/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world].
+(2026-03-09T15:58:51.670966683) (2026-03-09T15:58:51.670983933) [Err] [Server.cc:139] Error Code 13: [/sdf/world[@name="mrsim"]/include[0]/uri:/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world:L98]: Msg: Unable to find uri["https://fuel.gazebosim.org/1.0/desire/worlds/ports"]
+(2026-03-09T15:58:51.672996497) (2026-03-09T15:58:51.673007103) [Dbg] [gz.cc:410] Shutting down ign-gazebo-server

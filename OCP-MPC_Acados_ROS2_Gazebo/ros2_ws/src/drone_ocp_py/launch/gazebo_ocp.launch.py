@@ -6,20 +6,82 @@ from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 import os
+import xml.etree.ElementTree as ET
 from ament_index_python.packages import get_package_share_directory
 
 ################# CAMBIARE : DARE LA POSSIBILITA' TRAMITE PARAMETRO DI DECIDERE SE MPC PUBBLICA SU OPTIMAL_WRENCH O WRENCH_CMD
-################# COS'ALTRO AGGIUSTARE: PROBABILE DISCONTINUITÀ A +-PI NEL PLANNER (provare a non passare per rpy -> Rot mat direttamente e q)
-################# INSERIRE CAMERA
-################# DECIDERE COERENTEMENTE LE FREQUENZE E TEMPI DI PREDIZIONE ETC.
+################# COS'ALTRO AGGIUSTARE: FORSE  DISCONTINUITÀ A +-PI NEL PLANNER (provare a non passare per rpy -> Rot mat direttamente e q)
 ################# INTRODURRE COMANDI CONTROLLER
+
+def get_pose_from_world(world_path, target_keyword):
+    """
+    Cerca nel file XML del mondo la posa iniziale di un modello specifico.
+    Restituisce una tupla (x, y, z) come float.
+    """
+    try:
+        tree = ET.parse(world_path)
+        root = tree.getroot()
+        
+        # Cerca iterativamente in tutti i tag <model> e <include>
+        for elem in root.iter():
+            if elem.tag in ['model', 'include']:
+                name_tag = elem.find('name')
+                uri_tag = elem.find('uri')
+                
+                # Verifica se questo è il modello che stiamo cercando
+                is_target = False
+                if name_tag is not None and target_keyword in name_tag.text:
+                    is_target = True
+                elif uri_tag is not None and target_keyword in uri_tag.text:
+                    is_target = True
+                    
+                if is_target:
+                    pose_tag = elem.find('pose')
+                    if pose_tag is not None and pose_tag.text:
+                        # La stringa è del tipo "X Y Z Roll Pitch Yaw"
+                        coords = pose_tag.text.strip().split()
+                        if len(coords) >= 3:
+                            return float(coords[0]), float(coords[1]), float(coords[2]),float(coords[3]), float(coords[4]), float(coords[5]) 
+                    
+                    # Se trova il modello ma non c'è il tag <pose>, assume l'origine
+                    return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                    
+        return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    except Exception as e:
+        print(f"[WARNING] Errore nel parsing del world {world_path}: {e}")
+        return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+
 def generate_launch_description():
     # --- percorsi ---
     pkg_share_dir = get_package_share_directory('mrsim_gazebo_sim')
+    sdf_path = os.path.join(pkg_share_dir, 'models', 'mrsim-quad-unico', 'model.sdf')
     world_file = os.path.join(pkg_share_dir, 'worlds', 'example.world')
     bridge_config_file = os.path.join(pkg_share_dir, 'config', 'bridge.yaml')
     rviz_config_file = os.path.join(pkg_share_dir, 'config', 'rviz_config_file.rviz')
 
+    # Estrazione dinamica delle posizioni dal file XML!
+    drone_x, drone_y, drone_z, drone_roll, drone_pitch, drone_yaw = get_pose_from_world(world_file, "qr4")
+    peg_x, peg_y, peg_z, peg_roll, peg_pitch, peg_yaw  = get_pose_from_world(world_file, "my_peg")
+
+    print(f"[INFO] Lettura dinamica dal World -> Drone: X={drone_x}, Y={drone_y}, Z={drone_z}")
+    print(f"[INFO] Lettura dinamica dal World -> Peg: X={peg_x}, Y={peg_y}, Z={peg_z}")
+
+    # --- Parsing dell'XML ---
+    tree = ET.parse(sdf_path)
+    root = tree.getroot()
+
+    # --- Estrazione dei parametri fisici dall'SDF---
+    # Trova tutti i tag <mass> (base + rotori) e li somma
+    total_mass = sum([float(m.text) for m in root.findall('.//mass')])
+    
+    # Trova la prima inerzia e i coefficienti aerodinamici
+    ixx = float(root.find('.//ixx').text)
+    iyy = float(root.find('.//iyy').text)
+    izz = float(root.find('.//izz').text)
+    cf = float(root.find('.//cf').text)
+    ct = float(root.find('.//ct').text)
+
+    #   AGGIUSTARE MODALITA' 3 non funziona
     # --- argomenti ---
     planner_mode_arg = DeclareLaunchArgument(
         'planner_mode', default_value='1',
@@ -27,12 +89,12 @@ def generate_launch_description():
     )
 
     MPC_controller_arg = DeclareLaunchArgument(
-        'MPC_controller', default_value = '1',
+        'MPC_controller', default_value = '0',
         description="1 -> MPC controller utilizzato, 0 -> MPC controller non utilizzato"
     )
 
     controller_arg = DeclareLaunchArgument(
-        'controller', default_value='1',
+        'controller', default_value='2',
         description="1=hierarchical (PID_controller) | 2=geometric (geometric_controller)"
     )
     log_file_arg = DeclareLaunchArgument(
@@ -62,6 +124,7 @@ def generate_launch_description():
     is_planner_mode_2 = IfCondition(PythonExpression([planner_mode, ' == ', '2']))
     is_planner_mode_3 = IfCondition(PythonExpression([planner_mode, ' == ', '3']))
     is_planner_mode_4 = IfCondition(PythonExpression([planner_mode, ' == ', '4']))
+    is_planner_mode_1_or_2 = IfCondition(PythonExpression(["'", planner_mode, "' in ['1', '2']"]))  # per far partire il peg
 
     is_ctrl_1 = IfCondition(PythonExpression([
         "'", controller, "'", " == '1' and ",
@@ -78,7 +141,7 @@ def generate_launch_description():
 
     # --- ign gazebo ---
     #gz_sim = ExecuteProcess(cmd=['xvfb-run','-a','ign','gazebo','-v','4','-r', world_file])
-    gz_sim = ExecuteProcess(cmd=['ign','gazebo','-v','4','-r',world_file])
+    gz_sim = ExecuteProcess(cmd=['ign','gazebo','-v','4',world_file])
 
     # --- bridge ros<->gz ---
     ros_gz_bridge = Node(
@@ -97,7 +160,16 @@ def generate_launch_description():
         executable='peg_planner_node',
         name='peg_planner_node',
         output='screen', emulate_tty=True,
-        parameters=[{'use_sim_time': True}],
+        parameters=[{
+            'use_sim_time': True,
+            'peg_start_x': peg_x, 
+            'peg_start_y': peg_y, 
+            'peg_start_z': peg_z,
+            'peg_start_roll': peg_roll, 
+            'peg_start_pitch': peg_pitch, 
+            'peg_start_yaw': peg_yaw
+            }],
+        condition=is_planner_mode_1_or_2
     )
 
     # planner_mode 1: MPC online
@@ -108,7 +180,19 @@ def generate_launch_description():
         output='screen', emulate_tty=True,
         parameters=[{
             'use_sim_time': True,
-            'control_flag': MPC_controller
+            'control_flag': MPC_controller,
+            'mass': total_mass,
+            'ixx': ixx,
+            'iyy': iyy,
+            'izz': izz,
+            'cf': cf,
+            'ct': ct,
+            'start_x': drone_x, 
+            'start_y': drone_y, 
+            'start_z': drone_z,
+            'start_roll': drone_roll, 
+            'start_pitch': drone_pitch, 
+            'start_yaw': drone_yaw,
         }],
         condition=is_planner_mode_1,
     )
@@ -219,16 +303,17 @@ def generate_launch_description():
     )
 
     # --- avvio sfalsato (WALL-CLOCK) ---
-    peg_after        = TimerAction(period=1.5, actions=[peg_planner])
-    mpc_after        = TimerAction(period=2.0, actions=[mpc_planner])     # se planner_mode==1
-    ocp_after        = TimerAction(period=2.0, actions=[ocp_planner])     # se planner_mode==2
-    test_after       = TimerAction(period=2.0, actions=[planner_prova])   # se planner_mode==3
-    loader_after     = TimerAction(period=2.0, actions=[ocp_loader])      # se planner_mode==4
-    pid_after        = TimerAction(period=0.0, actions=[pid])             # se controller==1
-    geometric_after  = TimerAction(period=2.5, actions=[geom_ctrl])       # se controller==2
-    logger_after     = TimerAction(period=0.0, actions=[logger])
-    rviz_after       = TimerAction(period=1.0, actions=[rviz])
-    human_goal_after = TimerAction(period=2.1, actions=[human_goal_node])  # poco dopo mpc_after
+#    peg_after        = TimerAction(period=1.5, actions=[peg_planner])
+#    mpc_after        = TimerAction(period=2.0, actions=[mpc_planner])     # se planner_mode==1
+#    ocp_after        = TimerAction(period=2.0, actions=[ocp_planner])     # se planner_mode==2
+#    test_after       = TimerAction(period=2.0, actions=[planner_prova])   # se planner_mode==3
+#    loader_after     = TimerAction(period=2.0, actions=[ocp_loader])      # se planner_mode==4
+#    pid_after        = TimerAction(period=0.0, actions=[pid])             # se controller==1
+#    geometric_after  = TimerAction(period=2.5, actions=[geom_ctrl])       # se controller==2
+#    logger_after     = TimerAction(period=0.0, actions=[logger])
+#    rviz_after       = TimerAction(period=1.0, actions=[rviz])
+#    human_goal_after = TimerAction(period=2.1, actions=[human_goal_node])  # poco dopo mpc_after
+
 
     return LaunchDescription([
         planner_mode_arg, controller_arg, log_file_arg, enable_rviz_arg, enable_human_arg, MPC_controller_arg,
@@ -236,18 +321,18 @@ def generate_launch_description():
         gz_sim,
         ros_gz_bridge,
 
-        peg_after,
+        peg_planner,
 
-        ocp_after,
-        mpc_after,
-        test_after,
-        loader_after,
+        ocp_planner,
+        mpc_planner,
+        planner_prova,
+        ocp_planner,
 
-        pid_after,
-        geometric_after,
+        pid,
+        geom_ctrl,
 
-        human_goal_after,
+        human_goal_node,
 
-        logger_after,
-        rviz_after,
+        logger,
+        rviz,
     ])

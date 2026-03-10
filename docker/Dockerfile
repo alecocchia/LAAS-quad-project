@@ -90,6 +90,10 @@ ENV DISPLAY=:0
 ENV HOME=/home/user
 ENV ROS_DISTRO=humble
 
+# --- Auto-adaptation for NVIDIA (access to GPU graphics) ---
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=graphics,compute,utility
+
 # Add non-root user with UID and GID from build args
 ARG USER_ID
 ARG GROUP_ID

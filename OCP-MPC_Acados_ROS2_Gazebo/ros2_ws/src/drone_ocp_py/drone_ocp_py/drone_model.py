@@ -4,14 +4,12 @@ import numpy as np
 import casadi as ca
 from drone_ocp_py.common import *
 
-def export_quadrotor_ode_model() -> AcadosModel:
+def export_quadrotor_ode_model(m,Ixx,Iyy,Izz) -> AcadosModel:
 
     model_name = 'quadrotor_ode'
 
     # Model parameters
-    m = 1.28  # mass [kg]       # 1
     g = ca.vertcat(0,0,g0)   # gravity [m/s^2]
-    Ixx, Iyy, Izz = 0.023, 0.023, 0.022 #Inertia    #0.015, 0.015, 0.007
     J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
 
     # States
@@ -82,6 +80,7 @@ def export_quadrotor_ode_model() -> AcadosModel:
     model.p = ref_sym       #model.p = parameters 
 
     model.name = model_name
+    model.m = m             # Salviamo la massa nel modello per poterla recuperare dall'MPC
 
     #define in x_labels the roll, pitch and yaw instead of quaternion
     #so, in the plot function it is required to pass to rpy
@@ -97,11 +96,11 @@ def export_quadrotor_ode_model() -> AcadosModel:
     return model
 
 #Drone model rpy
-def convert_to_rpy_model(model_quat):
+def convert_to_rpy_model(model_quat,m,Ixx,Iyy,Izz):
 
     # Model parameters
     g = ca.vertcat(0,0,g0)   # gravity [m/s^2]
-
+    J=ca.SX(np.diag([Ixx,Iyy,Izz]))
 
     # Nuove variabili di stato
     p = ca.SX.sym('p', 3)

@@ -1,0 +1,122 @@
+(2026-03-09T16:11:43.452700182) (2026-03-09T16:11:43.452706571) [Msg] Ignition Gazebo Server v6.17.0
+(2026-03-09T16:11:43.455280957) (2026-03-09T16:11:43.455292575) [Msg] Loading SDF world file[/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world].
+(2026-03-09T16:11:43.499522237) (2026-03-09T16:11:43.499528934) [Msg] Downloading model [https://fuel.gazebosim.org/fortak123/models/baylands_terrain]
+(2026-03-09T16:11:44.101421276) (2026-03-09T16:11:44.101430650) [Dbg] [FuelClient.cc:2002] Downloading from a referral link [https://gz-fuel-resources-production.s3.amazonaws.com/Fortak123/b84c8ff6-1d46-4d10-b210-93c50e10f04d/.zips/1.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS5OHIRKDBY6VUUFF%2F20260309%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260309T161144Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=96b02d0b48bec8809fa4d50cda101ed08b4579df1c4a8423aaf7fabda6c9fa8e]
+(2026-03-09T16:12:23.34506529) (2026-03-09T16:12:23.34528978) [Dbg] [SignalHandler.cc:141] Received signal[2].
+(2026-03-09T16:12:23.34594724) (2026-03-09T16:12:23.34606475) [Dbg] [ServerPrivate.cc:110] Server received signal[2]
+(2026-03-09T16:20:35.890562194) (2026-03-09T16:20:35.890570556) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Asphalt.png]
+(2026-03-09T16:20:35.893664458) (2026-03-09T16:20:35.893669684) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Bark.png]
+(2026-03-09T16:20:35.894119938) (2026-03-09T16:20:35.894123653) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Branch.png]
+(2026-03-09T16:20:35.902710789) (2026-03-09T16:20:35.902717119) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Checker.png]
+(2026-03-09T16:20:35.904713810) (2026-03-09T16:20:35.904718331) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Concrete.png]
+(2026-03-09T16:20:35.914846114) (2026-03-09T16:20:35.914853937) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/ConcreteGround_01.png]
+(2026-03-09T16:20:35.921056936) (2026-03-09T16:20:35.921064127) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/ConcreteGround_02.png]
+(2026-03-09T16:20:35.931807138) (2026-03-09T16:20:35.931814167) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/ConcretePebbled.png]
+(2026-03-09T16:20:35.934713321) (2026-03-09T16:20:35.934718829) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Curb.png]
+(2026-03-09T16:20:35.940908380) (2026-03-09T16:20:35.940915182) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Curb_Red.png]
+(2026-03-09T16:20:35.951422929) (2026-03-09T16:20:35.951430979) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/DirtPath.png]
+(2026-03-09T16:20:35.954757054) (2026-03-09T16:20:35.954762180) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Grass.png]
+(2026-03-09T16:20:35.955026683) (2026-03-09T16:20:35.955030235) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Leaves.png]
+(2026-03-09T16:20:35.965347908) (2026-03-09T16:20:35.965354820) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Metal.png]
+(2026-03-09T16:20:35.970134007) (2026-03-09T16:20:35.970141820) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Metal_Roof.png]
+(2026-03-09T16:20:35.971234379) (2026-03-09T16:20:35.971238888) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/MurkyWater.png]
+(2026-03-09T16:20:36.12572835) (2026-03-09T16:20:36.12581064) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/ParkingLotMedian.png]
+(2026-03-09T16:20:36.14543591) (2026-03-09T16:20:36.14548279) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/ParkingMarkings.png]
+(2026-03-09T16:20:36.20730604) (2026-03-09T16:20:36.20736984) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/PicnicTable.png]
+(2026-03-09T16:20:36.21756933) (2026-03-09T16:20:36.21761482) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Road.jpg]
+(2026-03-09T16:20:36.28619191) (2026-03-09T16:20:36.28625522) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Rubber.png]
+(2026-03-09T16:20:36.45792306) (2026-03-09T16:20:36.45799627) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/RustyMetal.png]
+(2026-03-09T16:20:36.61797805) (2026-03-09T16:20:36.61805418) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Sand.png]
+(2026-03-09T16:20:36.70175890) (2026-03-09T16:20:36.70183608) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Sidewalk.png]
+(2026-03-09T16:20:36.77366462) (2026-03-09T16:20:36.77373061) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/Textures/Tree_Concrete.png]
+(2026-03-09T16:20:36.364750130) (2026-03-09T16:20:36.364760325) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/baylands_03.DAE]
+(2026-03-09T16:20:36.367199970) (2026-03-09T16:20:36.367205400) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/scripts/branch.material]
+(2026-03-09T16:20:36.367241172) (2026-03-09T16:20:36.367244390) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/scripts/caster_fp.glsl]
+(2026-03-09T16:20:36.367273597) (2026-03-09T16:20:36.367276795) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/media/scripts/caster_vp.glsl]
+(2026-03-09T16:20:36.367305091) (2026-03-09T16:20:36.367308268) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/model.config]
+(2026-03-09T16:20:36.367337336) (2026-03-09T16:20:36.367340547) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/model.sdf]
+(2026-03-09T16:20:36.367957267) (2026-03-09T16:20:36.367961387) [Dbg] [Zip.cc:180] Created file [/home/user/.ignition/fuel/fuel.gazebosim.org/fortak123/models/baylands_terrain/1/thumbnails/baylands.jpg]
+(2026-03-09T16:20:36.464391060) (2026-03-09T16:20:36.464398299) [Msg] Serving entity system service on [/entity/system/add]
+(2026-03-09T16:20:36.467698199) (2026-03-09T16:20:36.467704091) [Dbg] [SystemManager.cc:73] Loaded system [mrsim_gazebo_sim::SetPegPosePlugin] for entity [8]
+(2026-03-09T16:20:36.484640194) (2026-03-09T16:20:36.484646722) [Dbg] [SystemManager.cc:73] Loaded system [mrsim_gazebo_sim::MrsimDroneIgnPlugin] for entity [12]
+(2026-03-09T16:20:36.485912979) (2026-03-09T16:20:36.485917947) [Dbg] [MulticopterMotorModel.cc:373] Listening to topic: qr4/gazebo/command/motor_speed
+(2026-03-09T16:20:36.486005228) (2026-03-09T16:20:36.486009286) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::MulticopterMotorModel] for entity [12]
+(2026-03-09T16:20:36.486224293) (2026-03-09T16:20:36.486228454) [Dbg] [MulticopterMotorModel.cc:373] Listening to topic: qr4/gazebo/command/motor_speed
+(2026-03-09T16:20:36.486273699) (2026-03-09T16:20:36.486277582) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::MulticopterMotorModel] for entity [12]
+(2026-03-09T16:20:36.486470177) (2026-03-09T16:20:36.486474183) [Dbg] [MulticopterMotorModel.cc:373] Listening to topic: qr4/gazebo/command/motor_speed
+(2026-03-09T16:20:36.486519082) (2026-03-09T16:20:36.486522877) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::MulticopterMotorModel] for entity [12]
+(2026-03-09T16:20:36.486721469) (2026-03-09T16:20:36.486725976) [Dbg] [MulticopterMotorModel.cc:373] Listening to topic: qr4/gazebo/command/motor_speed
+(2026-03-09T16:20:36.486768672) (2026-03-09T16:20:36.486772536) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::MulticopterMotorModel] for entity [12]
+(2026-03-09T16:20:36.488033005) (2026-03-09T16:20:36.488038096) [Msg] OdometryPublisher publishing odometry on [/model/qr4/odometry]
+(2026-03-09T16:20:36.488102159) (2026-03-09T16:20:36.488106146) [Msg] OdometryPublisher publishing odometry with covariance on [/model/qr4/odometry_with_covariance]
+(2026-03-09T16:20:36.488160321) (2026-03-09T16:20:36.488164249) [Msg] OdometryPublisher publishing Pose_V (TF) on [/model/qr4/pose]
+(2026-03-09T16:20:36.488181528) (2026-03-09T16:20:36.488185026) [Dbg] [SystemManager.cc:73] Loaded system [ignition::gazebo::systems::OdometryPublisher] for entity [12]
+(2026-03-09T16:20:36.523095266) (2026-03-09T16:20:36.523103300) [Dbg] [Sensors.cc:506] Configuring Sensors system
+(2026-03-09T16:20:36.523165116) (2026-03-09T16:20:36.523168366) [Dbg] [Sensors.cc:431] SensorsPrivate::Run
+(2026-03-09T16:20:36.523221389) (2026-03-09T16:20:36.523224729) [Dbg] [SystemManager.cc:73] Loaded system [ignition::gazebo::systems::Sensors] for entity [12]
+(2026-03-09T16:20:36.523328128) (2026-03-09T16:20:36.523333609) [Dbg] [Sensors.cc:411] SensorsPrivate::RenderThread started
+(2026-03-09T16:20:36.523348707) (2026-03-09T16:20:36.523351882) [Dbg] [Sensors.cc:258] Waiting for init
+(2026-03-09T16:20:36.523502207) (2026-03-09T16:20:36.523505640) [Msg] Loaded level [3]
+(2026-03-09T16:20:36.523521690) (2026-03-09T16:20:36.523524777) [Msg] No systems loaded from SDF, loading defaults
+(2026-03-09T16:20:36.523638293) (2026-03-09T16:20:36.523642008) [Dbg] [ServerConfig.cc:1043] Loaded (3) plugins from file [/home/user/.ignition/gazebo/6/server.config]
+(2026-03-09T16:20:36.547749450) (2026-03-09T16:20:36.547757740) [Dbg] [Physics.cc:804] Loaded [ignition::physics::dartsim::Plugin] from library [/usr/lib/x86_64-linux-gnu/ign-physics-5/engine-plugins/libignition-physics-dartsim-plugin.so]
+(2026-03-09T16:20:36.547808904) (2026-03-09T16:20:36.547812259) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::Physics] for entity [1]
+(2026-03-09T16:20:36.549476707) (2026-03-09T16:20:36.549483268) [Msg] Create service on [/world/mrsim/create]
+(2026-03-09T16:20:36.549552785) (2026-03-09T16:20:36.549556734) [Msg] Remove service on [/world/mrsim/remove]
+(2026-03-09T16:20:36.549629197) (2026-03-09T16:20:36.549633010) [Msg] Pose service on [/world/mrsim/set_pose]
+(2026-03-09T16:20:36.549667959) (2026-03-09T16:20:36.549672727) [Msg] Pose service on [/world/mrsim/set_pose_vector]
+(2026-03-09T16:20:36.549767541) (2026-03-09T16:20:36.549771294) [Msg] Light configuration service on [/world/mrsim/light_config]
+(2026-03-09T16:20:36.549890786) (2026-03-09T16:20:36.549894570) [Msg] Physics service on [/world/mrsim/set_physics]
+(2026-03-09T16:20:36.549953429) (2026-03-09T16:20:36.549957164) [Msg] SphericalCoordinates service on [/world/mrsim/set_spherical_coordinates]
+(2026-03-09T16:20:36.549988648) (2026-03-09T16:20:36.549998628) [Msg] Enable collision service on [/world/mrsim/enable_collision]
+(2026-03-09T16:20:36.550038034) (2026-03-09T16:20:36.550041618) [Msg] Disable collision service on [/world/mrsim/disable_collision]
+(2026-03-09T16:20:36.550121106) (2026-03-09T16:20:36.550124877) [Msg] Material service on [/world/mrsim/visual_config]
+(2026-03-09T16:20:36.550177575) (2026-03-09T16:20:36.550181264) [Msg] Material service on [/world/mrsim/wheel_slip]
+(2026-03-09T16:20:36.550200751) (2026-03-09T16:20:36.550204148) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::UserCommands] for entity [1]
+(2026-03-09T16:20:36.552665544) (2026-03-09T16:20:36.552671045) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::SceneBroadcaster] for entity [1]
+(2026-03-09T16:20:36.552859436) (2026-03-09T16:20:36.552863828) [Msg] Serving world controls on [/world/mrsim/control], [/world/mrsim/control/state] and [/world/mrsim/playback/control]
+(2026-03-09T16:20:36.552924794) (2026-03-09T16:20:36.552928612) [Msg] Serving GUI information on [/world/mrsim/gui/info]
+(2026-03-09T16:20:36.552946410) (2026-03-09T16:20:36.552949833) [Msg] World [mrsim] initialized with [1ms] physics profile.
+(2026-03-09T16:20:36.553028117) (2026-03-09T16:20:36.553031964) [Msg] Serving world SDF generation service on [/world/mrsim/generate_world_sdf]
+(2026-03-09T16:20:36.553086224) (2026-03-09T16:20:36.553090025) [Msg] Serving world names on [/gazebo/worlds]
+(2026-03-09T16:20:36.553122054) (2026-03-09T16:20:36.553125730) [Msg] Resource path add service on [/gazebo/resource_paths/add].
+(2026-03-09T16:20:36.553156804) (2026-03-09T16:20:36.553160402) [Msg] Resource path get service on [/gazebo/resource_paths/get].
+(2026-03-09T16:20:36.553190947) (2026-03-09T16:20:36.553194542) [Msg] Resource path resolve service on [/gazebo/resource_paths/resolve].
+(2026-03-09T16:20:36.553231782) (2026-03-09T16:20:36.553235410) [Msg] Resource paths published on [/gazebo/resource_paths].
+(2026-03-09T16:20:36.553288595) (2026-03-09T16:20:36.553292334) [Msg] Server control service on [/server_control].
+(2026-03-09T16:20:36.553361204) (2026-03-09T16:20:36.553364946) [Msg] Found no publishers on /stats, adding root stats topic
+(2026-03-09T16:20:36.553424627) (2026-03-09T16:20:36.553428398) [Msg] Found no publishers on /clock, adding root clock topic
+(2026-03-09T16:20:36.553496876) (2026-03-09T16:20:36.553500712) [Dbg] [SimulationRunner.cc:501] Creating PostUpdate worker threads: 4
+(2026-03-09T16:20:36.553514667) (2026-03-09T16:20:36.553518088) [Dbg] [SimulationRunner.cc:512] Creating postupdate worker thread (0)
+(2026-03-09T16:20:36.553575228) (2026-03-09T16:20:36.553578954) [Dbg] [SimulationRunner.cc:512] Creating postupdate worker thread (1)
+(2026-03-09T16:20:36.553618180) (2026-03-09T16:20:36.553621796) [Dbg] [SimulationRunner.cc:512] Creating postupdate worker thread (2)
+(2026-03-09T16:20:36.665013379) Triangle input has a count of zero. This is likely not desired
+(2026-03-09T16:20:36.665270056) Triangle input has a count of zero. This is likely not desired
+(2026-03-09T16:20:36.665506213) Triangle input has a count of zero. This is likely not desired
+(2026-03-09T16:20:36.665742814) Triangle input has a count of zero. This is likely not desired
+(2026-03-09T16:20:37.49641774) (2026-03-09T16:20:37.49650480) [Wrn] [ColladaLoader.cc:2394] Triangle input semantic: 'COLOR' is currently not supported
+(2026-03-09T16:20:37.645763399) (2026-03-09T16:20:37.645772583) [Wrn] [ColladaLoader.cc:2394] Triangle input semantic: 'COLOR' is currently not supported
+(2026-03-09T16:20:38.961171560) (2026-03-09T16:20:38.961179102) [Dbg] [SimulationFeatures.cc:71] Simulation timestep set to: 0.005
+(2026-03-09T16:20:39.326430412) (2026-03-09T16:20:39.326438491) [Dbg] [Sensors.cc:610] Initialization needed
+(2026-03-09T16:20:39.326533833) (2026-03-09T16:20:39.326538964) [Dbg] [Sensors.cc:270] Initializing render context
+(2026-03-09T16:20:39.326636039) (2026-03-09T16:20:39.326639637) [Msg] Loading plugin [ignition-rendering-ogre2]
+(2026-03-09T16:20:39.327032967) (2026-03-09T16:20:39.327038456) [Msg] Serving scene information on [/world/mrsim/scene/info]
+(2026-03-09T16:20:39.327097215) (2026-03-09T16:20:39.327101184) [Msg] Serving graph information on [/world/mrsim/scene/graph]
+(2026-03-09T16:20:39.327190021) (2026-03-09T16:20:39.327194100) [Msg] Serving full state on [/world/mrsim/state]
+(2026-03-09T16:20:39.327233872) (2026-03-09T16:20:39.327237573) [Msg] Serving full state (async) on [/world/mrsim/state_async]
+(2026-03-09T16:20:39.327285052) (2026-03-09T16:20:39.327290252) [Msg] Publishing scene information on [/world/mrsim/scene/info]
+(2026-03-09T16:20:39.327341629) (2026-03-09T16:20:39.327345424) [Msg] Publishing entity deletions on [/world/mrsim/scene/deletion]
+(2026-03-09T16:20:39.327376484) (2026-03-09T16:20:39.327381250) [Msg] Publishing state changes on [/world/mrsim/state]
+(2026-03-09T16:20:39.327419703) (2026-03-09T16:20:39.327423366) [Msg] Publishing pose messages on [/world/mrsim/pose/info]
+(2026-03-09T16:20:39.327484603) (2026-03-09T16:20:39.327488296) [Msg] Publishing dynamic pose messages on [/world/mrsim/dynamic_pose/info]
+(2026-03-09T16:20:39.468025881) (2026-03-09T16:20:39.468031726) [Dbg] [RenderUtil.cc:2591] Create scene [scene]
+((2026-03-09T16:20:39.490296596) (2026-03-09T16:20:39.490315011) ) (2026-03-09T16:20:39.490322521) [Dbg] [Sensors.cc:284] Initialization needed
+
+
+(2026-03-09T16:20:41.639323889) (2026-03-09T16:20:41.639330981) [Dbg] [CameraSensor.cc:449] Camera images for [qr4::base::camera] advertised on [/camera]
+(2026-03-09T16:20:41.639699033) (2026-03-09T16:20:41.639703289) [Dbg] [CameraSensor.cc:760] Camera info for [qr4::base::camera] advertised on [/camera_info]
+(2026-03-09T16:20:41.640720957) (2026-03-09T16:20:41.640724985) [Wrn] [Ogre2Camera.cc:390] Ogre2Camera::SetVisibilityMask: Mask bits c0000000 are set but will be ignored as they conflict with the reserved bits used internally by the ogre2 backend.
+(2026-03-09T16:20:48.443541030) (2026-03-09T16:20:48.443549824) [Dbg] [EntityComponentManager.cc:1623] Updated state thread iterators: 8 threads processing around 6 entities each.
+(2026-03-09T16:20:48.443810682(2026-03-09T16:20:48.443810682(2026-03-09T16:20:48.443810682((2026-03-09T16:20:48.443829463) 2026-03-09T16:20:48.443832563) 2026-03-09T16:20:48.443832563) () ((2026-03-09T16:20:48.4438472542026-03-09T16:20:48.443855121) ) (2026-03-09T16:20:48.443868529) [Wrn] [Model.hh:69] [Wrn] [Component.hh:144] [Wrn] [Model.hh:69] [Wrn] [Component.hh:144] [Wrn] [Model.hh:69] Skipping serialization / deserialization for models with //pose/@relative_to attribute.with //pose/@relative_to attribute.
+Trying to serialize component with data type [N3sdf3v125WorldE], which doesn't have with //pose/@relative_to attribute.
+`operator<<`. Component will not be serialized.(2026-03-09T16:24:37.56095364) (2026-03-09T16:24:37.56111979) [Dbg] [CameraSensor.cc:573] Enabling camera sensor: 'qr4::base::camera' data generation.

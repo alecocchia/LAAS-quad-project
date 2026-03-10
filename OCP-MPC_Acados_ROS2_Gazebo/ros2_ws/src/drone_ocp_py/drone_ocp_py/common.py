@@ -22,9 +22,9 @@ from mpl_toolkits.mplot3d import Axes3D
 
 track="trefoil_track.txt"
 g0  = 9.81       # [m.s^2] gravitational accerelation    prev: 9.80665
-m   = 1.28            # [kg] mass   prev: 1
-Ixx, Iyy, Izz = 0.023, 0.023, 0.022 #Inertia    prev: 0.015, 0.015, 0.007
-J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
+#m   = 1.28            # [kg] mass   prev: 1
+#Ixx, Iyy, Izz = 0.023, 0.023, 0.022 #Inertia    prev: 0.015, 0.015, 0.007
+#J = ca.SX(np.diag([Ixx, Iyy, Izz])) #Inertia
 
 
 

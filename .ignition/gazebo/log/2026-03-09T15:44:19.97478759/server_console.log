@@ -1,0 +1,6 @@
+(2026-03-09T15:44:19.202592210) (2026-03-09T15:44:19.202599424) [Msg] Ignition Gazebo Server v6.17.0
+(2026-03-09T15:44:19.205252670) (2026-03-09T15:44:19.205263506) [Msg] Loading SDF world file[/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world].
+(2026-03-09T15:44:19.271153147) (2026-03-09T15:44:19.271164105) [Msg] Downloading model [https://fuel.gazebosim.org/openrobotics/models/nathan_benderson_park]
+(2026-03-09T15:44:19.825618884) (2026-03-09T15:44:19.825625935) [Dbg] [FuelClient.cc:2002] Downloading from a referral link [https://gz-fuel-resources-production.s3.amazonaws.com/OpenRobotics/2d5b3e20-7ac6-4837-ad83-09143e13d2fc/.zips/5.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS5OHIRKDBY6VUUFF%2F20260309%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260309T154419Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=923ed9cb87fd126fbc17bea1f47bead13bc7f26b60b5fac50f43383186051cf8]
+(2026-03-09T15:45:09.443930106) (2026-03-09T15:45:09.443951382) [Dbg] [SignalHandler.cc:141] Received signal[2].
+(2026-03-09T15:45:09.444017337) (2026-03-09T15:45:09.444029279) [Dbg] [ServerPrivate.cc:110] Server received signal[2]

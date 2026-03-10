@@ -1,0 +1,4 @@
+(2026-03-10T11:31:11.531783897) (2026-03-10T11:31:11.531791634) [Msg] Ignition Gazebo Server v6.17.0
+(2026-03-10T11:31:11.534183011) (2026-03-10T11:31:11.534194753) [Msg] Loading SDF world file[/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world].
+(2026-03-10T11:31:11.768690245) (2026-03-10T11:31:11.768703467) [Err] [Server.cc:139] Error Code 13: [/sdf/world[@name="mrsim"]/include[1]/uri:/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world:L126]: Msg: Unable to find uri[model://Coast Waves]
+(2026-03-10T11:31:11.771682230) (2026-03-10T11:31:11.771695577) [Dbg] [gz.cc:410] Shutting down ign-gazebo-server
