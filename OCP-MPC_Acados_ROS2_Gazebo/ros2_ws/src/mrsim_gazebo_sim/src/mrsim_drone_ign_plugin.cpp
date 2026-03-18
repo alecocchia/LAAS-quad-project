@@ -196,14 +196,9 @@ namespace mrsim_gazebo_sim
             {
                 std::lock_guard<std::mutex> lock(this->wrench_commands_mutex_);
                 
-                // SE NESSUN COMANDO E' ANCORA ARRIVATO: RESTA A TERRA
+                // SE NESSUN COMANDO E' ANCORA ARRIVATO: RESTA IN HOVERING
                 if (!this->first_wrench_received_) {
-                    wrench_to_use.mutable_force()->set_x(0.0);
-                    wrench_to_use.mutable_force()->set_y(0.0);
-                    wrench_to_use.mutable_force()->set_z(0.0);
-                    wrench_to_use.mutable_torque()->set_x(0.0);
-                    wrench_to_use.mutable_torque()->set_y(0.0);
-                    wrench_to_use.mutable_torque()->set_z(0.0);
+                    wrench_to_use = this->hover_wrench_; // Applica Hovering
                 } 
                 else 
                 {
@@ -251,7 +246,7 @@ namespace mrsim_gazebo_sim
             for (size_t i = 0; i < this->rotors_.size(); ++i)
             {
                 double rotor_speed_sq = rotor_speed_sq_commands(i);
-                double target_angular_velocity = std::max(0.0, std::sqrt(rotor_speed_sq));
+                double target_angular_velocity = std::sqrt(std::max(0.0, rotor_speed_sq));
                 actuators_msg.add_velocity(target_angular_velocity);
             }
         

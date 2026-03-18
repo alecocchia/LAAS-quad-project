@@ -177,9 +177,10 @@ ENV OMP_NUM_THREADS=4
 RUN pip3 install /opt/acados/interfaces/acados_template
 
 # Scarica t_renderer, rinominalo, rendilo eseguibile e spostalo in /opt/acados/bin
-#RUN curl -L https://github.com/acados/tera_renderer/releases/download/v0.2.0/t_renderer-v0.2.0-linux-amd64 \
-#    -o /opt/acados/bin/t_renderer && \
-#    chmod +x /opt/acados/bin/t_renderer
+RUN mkdir -p /opt/acados/bin && \
+    curl -L https://github.com/acados/tera_renderer/releases/download/v0.2.0/t_renderer-v0.2.0-linux-amd64 \
+    -o /opt/acados/bin/t_renderer && \
+    chmod +x /opt/acados/bin/t_renderer
 
 RUN apt-get update 
 WORKDIR ${HOME}/ros2_ws
