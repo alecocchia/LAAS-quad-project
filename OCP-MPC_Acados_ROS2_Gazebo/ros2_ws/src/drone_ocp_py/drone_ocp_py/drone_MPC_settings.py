@@ -162,45 +162,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     ocp.solver_options.nlp_solver_type = 'SQP_RTI'
     ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 
-    ################## PROVARE A INCLUDERE I VINCOLI 1 PER VOLTA
-
-    # ==========================================================
-    # Constraints for camera
-    # ==========================================================
-    visual_constr_expr = ca.vertcat(
-        Y_c - T_h * X_c,  # Limite Destro:  Y_c <= T_h * X_c
-        Y_c + T_h * X_c,  # Limite Sinistro: Y_c >= -T_h * X_c
-        Z_c - T_v * X_c,  # Limite Alto:    Z_c <= T_v * X_c
-        Z_c + T_v * X_c,  # Limite Basso:   Z_c >= -T_v * X_c
-        X_c               # Profondità:     X_c >= X_min
-    )
     
-    model.con_h_expr = visual_constr_expr
-    
-    X_min = 0.5 # Il peg deve stare almeno a X_min DAVANTI alla telecamera (distanza di sicurezza)
-    ocp.constraints.lh = np.array([-100,  0.0, -100,  0.0, X_min])
-    ocp.constraints.uh = np.array([ 0.0,  100,  0.0,  100, 100])
-
-    # ==========================================================
-    # SOFT CONSTRAINTS (Slack Variables)
-    # ==========================================================
-    n_soft_h = 5
-    ocp.constraints.idxsh = np.array(range(n_soft_h))
-
-    # Usare valori strettamente positivi
-    penalty_L1 = 1e0
-    penalty_L2 = 1e1
-    weights_costs = np.array([1, 1, 1, 1, 1])
-
-    ocp.cost.Zl = penalty_L2 * weights_costs
-    ocp.cost.Zu = penalty_L2 * weights_costs
-    ocp.cost.zl = penalty_L1 * weights_costs
-    ocp.cost.zu = penalty_L1 * weights_costs
-
-  #  # --- Fine parte visuale --- 
-
-############ GESTIRE RPY VS CENTRO IMMAGINE
-######## POI GESTIRE INPUT UMANO IN MODO CHE IL DRONE TENGA INQUADRATO L'OGGETTO ANCHE CON CAMBIO RIFERIMENTO DI POSIZIONE UMANO
     '''
                                         COST FUNCTION               
     '''
