@@ -81,6 +81,10 @@ def generate_launch_description():
     cf = float(root.find('.//cf').text)
     ct = float(root.find('.//ct').text)
 
+    # Trova la posa della camera nel body frame
+    camera_pose = root.find('.//sensor[@name="camera"]/pose').text
+    cam_x, cam_y, cam_z, cam_roll, cam_pitch, cam_yaw = [float(val) for val in camera_pose.split()]
+
     #   AGGIUSTARE MODALITA' 3 non funziona
     # --- argomenti ---
     planner_mode_arg = DeclareLaunchArgument(
@@ -89,7 +93,7 @@ def generate_launch_description():
     )
 
     MPC_controller_arg = DeclareLaunchArgument(
-        'MPC_controller', default_value = '0',
+        'MPC_controller', default_value = '1',
         description="1 -> MPC controller utilizzato, 0 -> MPC controller non utilizzato"
     )
 
@@ -141,7 +145,7 @@ def generate_launch_description():
 
     # --- ign gazebo ---
     #gz_sim = ExecuteProcess(cmd=['xvfb-run','-a','ign','gazebo','-v','4','-r', world_file])
-    gz_sim = ExecuteProcess(cmd=['ign','gazebo','-v','4',world_file])
+    gz_sim = ExecuteProcess(cmd=['ign','gazebo','-r','-v','4',world_file])
 
     # --- bridge ros<->gz ---
     ros_gz_bridge = Node(
@@ -187,6 +191,12 @@ def generate_launch_description():
             'izz': izz,
             'cf': cf,
             'ct': ct,
+            'cam_x' : cam_x,        # camera in body frame
+            'cam_y' : cam_y,
+            'cam_z' : cam_z,
+            'cam_roll' : cam_roll,
+            'cam_pitch' : cam_pitch,
+            'cam_yaw' : cam_yaw,
             'start_x': drone_x, 
             'start_y': drone_y, 
             'start_z': drone_z,

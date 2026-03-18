@@ -14,7 +14,7 @@ namespace mrsim_gazebo_sim
   {
     public: void Configure(const ignition::gazebo::Entity &_entity,
                            const std::shared_ptr<const sdf::Element> &,
-                           ignition::gazebo::EntityComponentManager &_ecm,
+                           ignition::gazebo::EntityComponentManager &,
                            ignition::gazebo::EventManager &) override
     {
       this->model = ignition::gazebo::Model(_entity);

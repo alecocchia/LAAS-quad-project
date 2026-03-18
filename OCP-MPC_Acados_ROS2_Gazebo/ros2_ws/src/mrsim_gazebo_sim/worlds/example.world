@@ -133,7 +133,7 @@
       <uri>model://peg</uri>
       <name>my_peg</name>
       <static>true</static>
-      <pose>2.0 2.0 20 0.0 0.0 0.0</pose>
+      <pose>2.0 2.0 20.0 0.0 0.0 0.0</pose>
     </include>
     
     <!--

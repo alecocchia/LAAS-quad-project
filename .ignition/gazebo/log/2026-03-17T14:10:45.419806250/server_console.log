@@ -1,0 +1,88 @@
+(2026-03-17T14:10:45.525328108) (2026-03-17T14:10:45.525335587) [Msg] Ignition Gazebo Server v6.17.1
+(2026-03-17T14:10:45.527315116) (2026-03-17T14:10:45.527324572) [Msg] Loading SDF world file[/home/user/ros2_ws/install/mrsim_gazebo_sim/share/mrsim_gazebo_sim/worlds/example.world].
+(2026-03-17T14:10:45.770743448) (2026-03-17T14:10:45.770752473) [Msg] Serving entity system service on [/entity/system/add]
+(2026-03-17T14:10:45.789353995) (2026-03-17T14:10:45.789362922) [Dbg] [SystemManager.cc:73] Loaded system [ignition::gazebo::systems::ShaderParam] for entity [9]
+(2026-03-17T14:10:45.792377791) (2026-03-17T14:10:45.792387910) [Dbg] [SystemManager.cc:73] Loaded system [mrsim_gazebo_sim::SetPegPosePlugin] for entity [10]
+(2026-03-17T14:10:45.822153185) (2026-03-17T14:10:45.822167766) [Dbg] [SystemManager.cc:73] Loaded system [mrsim_gazebo_sim::MrsimDroneIgnPlugin] for entity [14]
+(2026-03-17T14:10:45.825609581) (2026-03-17T14:10:45.825617360) [Dbg] [MulticopterMotorModel.cc:373] Listening to topic: qr4/gazebo/command/motor_speed
+(2026-03-17T14:10:45.825730170) (2026-03-17T14:10:45.825734131) [Dbg] [SystemManager.cc:73] Loaded system [ignition::gazebo::systems::MulticopterMotorModel] for entity [14]
+(2026-03-17T14:10:45.825993225) (2026-03-17T14:10:45.825999893) [Dbg] [MulticopterMotorModel.cc:373] Listening to topic: qr4/gazebo/command/motor_speed
+(2026-03-17T14:10:45.826061389) (2026-03-17T14:10:45.826066129) [Dbg] [SystemManager.cc:73] Loaded system [ignition::gazebo::systems::MulticopterMotorModel] for entity [14]
+(2026-03-17T14:10:45.826356432) (2026-03-17T14:10:45.826362520) [Dbg] [MulticopterMotorModel.cc:373] Listening to topic: qr4/gazebo/command/motor_speed
+(2026-03-17T14:10:45.826424825) (2026-03-17T14:10:45.826430751) [Dbg] [SystemManager.cc:73] Loaded system [ignition::gazebo::systems::MulticopterMotorModel] for entity [14]
+(2026-03-17T14:10:45.826701584) (2026-03-17T14:10:45.826706142) [Dbg] [MulticopterMotorModel.cc:373] Listening to topic: qr4/gazebo/command/motor_speed
+(2026-03-17T14:10:45.826772231) (2026-03-17T14:10:45.826776097) [Dbg] [SystemManager.cc:73] Loaded system [ignition::gazebo::systems::MulticopterMotorModel] for entity [14]
+(2026-03-17T14:10:45.827906000) (2026-03-17T14:10:45.827911488) [Msg] OdometryPublisher publishing odometry on [/model/qr4/odometry]
+(2026-03-17T14:10:45.827984298) (2026-03-17T14:10:45.827988173) [Msg] OdometryPublisher publishing odometry with covariance on [/model/qr4/odometry_with_covariance]
+(2026-03-17T14:10:45.828047750) (2026-03-17T14:10:45.828051564) [Msg] OdometryPublisher publishing Pose_V (TF) on [/model/qr4/pose]
+(2026-03-17T14:10:45.828069622) (2026-03-17T14:10:45.828073035) [Dbg] [SystemManager.cc:73] Loaded system [ignition::gazebo::systems::OdometryPublisher] for entity [14]
+(2026-03-17T14:10:45.839518716) (2026-03-17T14:10:45.839526293) [Dbg] [Sensors.cc:506] Configuring Sensors system
+(2026-03-17T14:10:45.839677880) (2026-03-17T14:10:45.839681907) [Dbg] [Sensors.cc:431] SensorsPrivate::Run
+(2026-03-17T14:10:45.839762865) (2026-03-17T14:10:45.839770705) 2026-03-17T14:10:45.839771143) (2026-03-17T14:10:45.839789199) [Dbg] [Sensors.cc:411] [Dbg] [SystemManager.cc:73] SensorsPrivate::RenderThread started
+(Loaded system [2026-03-17T14:10:45.839813658) (ignition::gazebo::systems::Sensors(ignition::gazebo::systems::Sensors2026-03-17T14:10:45.839825481) Waiting for init
+14]
+(2026-03-17T14:10:45.840184091) (2026-03-17T14:10:45.840188736) [Msg] Loaded level [3]
+(2026-03-17T14:10:45.840206044) (2026-03-17T14:10:45.840209485) [Msg] No systems loaded from SDF, loading defaults
+(2026-03-17T14:10:45.840339484) (2026-03-17T14:10:45.840343227) [Dbg] [ServerConfig.cc:1043] Loaded (3) plugins from file [/home/user/.ignition/gazebo/6/server.config]
+(2026-03-17T14:10:45.862073087) (2026-03-17T14:10:45.862088657) [Dbg] [Physics.cc:804] Loaded [ignition::physics::dartsim::Plugin] from library [/usr/lib/x86_64-linux-gnu/ign-physics-5/engine-plugins/libignition-physics-dartsim-plugin.so]
+(2026-03-17T14:10:45.862244988) (2026-03-17T14:10:45.862250450) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::Physics] for entity [1]
+(2026-03-17T14:10:45.865053973) (2026-03-17T14:10:45.865065807) [Msg] Create service on [/world/mrsim/create]
+(2026-03-17T14:10:45.865183223) (2026-03-17T14:10:45.865188663) [Msg] Remove service on [/world/mrsim/remove]
+(2026-03-17T14:10:45.865287168) (2026-03-17T14:10:45.865297396) [Msg] Pose service on [/world/mrsim/set_pose]
+(2026-03-17T14:10:45.865411833) (2026-03-17T14:10:45.865418082) [Msg] Pose service on [/world/mrsim/set_pose_vector]
+(2026-03-17T14:10:45.865570475) (2026-03-17T14:10:45.865575952) [Msg] Light configuration service on [/world/mrsim/light_config]
+(2026-03-17T14:10:45.865791202) (2026-03-17T14:10:45.865797312) [Msg] Physics service on [/world/mrsim/set_physics]
+(2026-03-17T14:10:45.865936028) (2026-03-17T14:10:45.865942171) [Msg] SphericalCoordinates service on [/world/mrsim/set_spherical_coordinates]
+(2026-03-17T14:10:45.865991006) (2026-03-17T14:10:45.865997283) [Msg] Enable collision service on [/world/mrsim/enable_collision]
+(2026-03-17T14:10:45.866034738) (2026-03-17T14:10:45.866039883) [Msg] Disable collision service on [/world/mrsim/disable_collision]
+(2026-03-17T14:10:45.866163465) (2026-03-17T14:10:45.866169301) [Msg] Material service on [/world/mrsim/visual_config]
+(2026-03-17T14:10:45.866235677) (2026-03-17T14:10:45.866241525) [Msg] Material service on [/world/mrsim/wheel_slip]
+(2026-03-17T14:10:45.866265359) (2026-03-17T14:10:45.866268767) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::UserCommands] for entity [1]
+(2026-03-17T14:10:45.868175147) (2026-03-17T14:10:45.868185405) [Dbg] [SystemManager.cc:73] Loaded system [gz::sim::systems::SceneBroadcaster] for entity [1]
+(2026-03-17T14:10:45.868614711) (2026-03-17T14:10:45.868622937) [Msg] Serving world controls on [/world/mrsim/control], [/world/mrsim/control/state] and [/world/mrsim/playback/control]
+(2026-03-17T14:10:45.868743597) (2026-03-17T14:10:45.868750106) [Msg] Serving GUI information on [/world/mrsim/gui/info]
+(2026-03-17T14:10:45.868780209) (2026-03-17T14:10:45.868786386) [Msg] World [mrsim] initialized with [1ms] physics profile.
+(2026-03-17T14:10:45.868942123) (2026-03-17T14:10:45.868948920) [Msg] Serving world SDF generation service on [/world/mrsim/generate_world_sdf]
+(2026-03-17T14:10:45.869047753) (2026-03-17T14:10:45.869053618) [Msg] Serving world names on [/gazebo/worlds]
+(2026-03-17T14:10:45.869105180) (2026-03-17T14:10:45.869111399) [Msg] Resource path add service on [/gazebo/resource_paths/add].
+(2026-03-17T14:10:45.869171221) (2026-03-17T14:10:45.869176032) [Msg] Resource path get service on [/gazebo/resource_paths/get].
+(2026-03-17T14:10:45.869226171) (2026-03-17T14:10:45.869231795) [Msg] Resource path resolve service on [/gazebo/resource_paths/resolve].
+(2026-03-17T14:10:45.869305155) (2026-03-17T14:10:45.869311079) [Msg] Resource paths published on [/gazebo/resource_paths].
+(2026-03-17T14:10:45.869481635) (2026-03-17T14:10:45.869488244) [Msg] Server control service on [/server_control].
+(2026-03-17T14:10:47.423884634) (2026-03-17T14:10:47.423899752) [Msg] Found no publishers on /stats, adding root stats topic
+(2026-03-17T14:10:47.424108844) (2026-03-17T14:10:47.424116169) [Msg] Found no publishers on /clock, adding root clock topic
+(2026-03-17T14:10:47.424315130) (2026-03-17T14:10:47.424322035) [Dbg] [SimulationRunner.cc:501] Creating PostUpdate worker threads: 4
+(2026-03-17T14:10:47.424350045) (2026-03-17T14:10:47.424356066) [Dbg] [SimulationRunner.cc:512] Creating postupdate worker thread (0)
+(2026-03-17T14:10:47.424449024) (2026-03-17T14:10:47.424455928) [Dbg] [SimulationRunner.cc:512] Creating postupdate worker thread (1)
+(2026-03-17T14:10:47.424506169) (2026-03-17T14:10:47.424510877) [Dbg] [SimulationRunner.cc:512] Creating postupdate worker thread (2)
+(2026-03-17T14:10:47.429031336) (2026-03-17T14:10:47.429043092) [Dbg] [SimulationFeatures.cc:71] Simulation timestep set to: 0.005
+(2026-03-17T14:10:47.429481019) (2026-03-17T14:10:47.429490228) [Dbg] [Sensors.cc:610] Initialization needed
+(2026-03-17T14:10:47.429537266) (2026-03-17T14:10:47.429543520) [Dbg] [Sensors.cc:270] Initializing render context
+(2026-03-17T14:10:47.429679999) (2026-03-17T14:10:47.429685669) [Msg] Loading plugin [ignition-rendering-ogre2]
+(2026-03-17T14:10:47.430156116) (2026-03-17T14:10:47.430165144) [Msg] Serving scene information on [/world/mrsim/scene/info]
+(2026-03-17T14:10:47.430259555) (2026-03-17T14:10:47.430265854) [Msg] Serving graph information on [/world/mrsim/scene/graph]
+(2026-03-17T14:10:47.430399458) (2026-03-17T14:10:47.430407320) [Msg] Serving full state on [/world/mrsim/state]
+(2026-03-17T14:10:47.430478648) (2026-03-17T14:10:47.430489028) [Msg] Serving full state (async) on [/world/mrsim/state_async]
+(2026-03-17T14:10:47.430625867) (2026-03-17T14:10:47.430632314) [Msg] Publishing scene information on [/world/mrsim/scene/info]
+(2026-03-17T14:10:47.430704372) (2026-03-17T14:10:47.430710841) [Msg] Publishing entity deletions on [/world/mrsim/scene/deletion]
+(2026-03-17T14:10:47.430756251) (2026-03-17T14:10:47.430762590) [Msg] Publishing state changes on [/world/mrsim/state]
+(2026-03-17T14:10:47.430833490) (2026-03-17T14:10:47.430839636) [Msg] Publishing pose messages on [/world/mrsim/pose/info]
+(2026-03-17T14:10:47.430904462) (2026-03-17T14:10:47.430910703) [Msg] Publishing dynamic pose messages on [/world/mrsim/dynamic_pose/info]
+(2026-03-17T14:10:47.431164267) (2026-03-17T14:10:47.431169132) [Dbg] [EntityComponentManager.cc:1623] Updated state thread iterators: 8 threads processing around 6 entities each.
+(2026-03-17T14:10:47.577137829) (2026-03-17T14:10:47.577144986) [Dbg] [RenderUtil.cc:2591] Create scene [scene]
+(2026-03-17T14:10:47.603899046(2026-03-17T14:10:47.603899046() (2026-03-17T14:10:47.603917883) () 2026-03-17T14:10:47.603930494) ) [Dbg] [Sensors.cc:284] [Dbg] [Sensors.cc:610] [Dbg] [Sensors.cc:284] [Dbg] [Sensors.cc:610] Rendering Thread initialized
+Initialization needed
+(2026-03-17T14:10:48.458173687) (2026-03-17T14:10:48.458182145) [Dbg] [CameraSensor.cc:394] Camera images for [qr4::base::camera] advertised on [/camera]
+(2026-03-17T14:10:48.458333800) (2026-03-17T14:10:48.458340203) [Dbg] [CameraSensor.cc:705] Camera info for [qr4::base::camera] advertised on [/camera_info]
+(2026-03-17T14:10:48.458632971) (2026-03-17T14:10:48.458637589) [Wrn] [Ogre2Camera.cc:390] Ogre2Camera::SetVisibilityMask: Mask bits c0000000 are set but will be ignored as they conflict with the reserved bits used internally by the ogre2 backend.
+(2026-03-17T14:10:48.458872703) (2026-03-17T14:10:48.458878736) [Msg] Loading plugin [ignition-rendering-ogre2]
+(2026-03-17T14:10:48.514559004) (2026-03-17T14:10:48.514568499) [Dbg] [CameraSensor.cc:518] Enabling camera sensor: 'qr4::base::camera' data generation.
+(2026-03-17T14:10:58.13810651) (2026-03-17T14:10:58.13820098) [Dbg] [SignalHandler.cc:141] Received signal[2].
+(2026-03-17T14:10:58.13844065) (2026-03-17T14:10:58.13847690) [Dbg] [ServerPrivate.cc:110] Server received signal[2]
+(2026-03-17T14:10:58.13865245) (2026-03-17T14:10:58.13868690) [Dbg] [Sensors.cc:439] SensorsPrivate::Stop
+(2026-03-17T14:10:58.14194382) (2026-03-17T14:10:58.14201303) [Dbg] [Sensors.cc:425] SensorsPrivate::RenderThread stopped
+(2026-03-17T14:10:58.15230654) (2026-03-17T14:10:58.15239876) [Dbg] [gz.cc:410] Shutting down ign-gazebo-server
+(((2026-03-17T14:10:58.18764814) 2026-03-17T14:10:58.18770224) 2026-03-17T14:10:58.18770224) (2026-03-17T14:10:58.18786043) ) ([Dbg] [SimulationRunner.cc:528] 2026-03-17T14:10:58.18806944[Dbg] [SimulationRunner.cc:528] 2026-03-17T14:10:58.18806944[Dbg] [SimulationRunner.cc:528] 2026-03-17T14:10:58.18806944(2026-03-17T14:10:58.188174912026-03-17T14:10:58.18817491) Exiting postupdate worker thread () Exiting postupdate worker thread ([Dbg] [SimulationRunner.cc:528] Exiting postupdate worker thread (0)
+2)
+Exiting postupdate worker thread (1)
+(2026-03-17T14:10:58.48849323) (2026-03-17T14:10:58.48864611) [Dbg] [Sensors.cc:439] SensorsPrivate::Stop

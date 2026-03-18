@@ -86,7 +86,7 @@
         </material>
       </visual>
       <sensor type="camera" name="camera">
-        <pose>0.1 0 0.05 0 0 0</pose>
+        <pose>0.08 0 -0.08 0 0 0</pose>
         <camera>
           <horizontal_fov>1.047</horizontal_fov>
           <image>
@@ -101,6 +101,16 @@
         <visualize>true</visualize>
         <topic>/camera</topic> 
       </sensor>
+      <visual name="camera_visual">
+        <pose>0.08 0 -0.08 0 0 0</pose>
+        <geometry>
+          <box><size>0.02 0.04 0.03</size></box>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient>
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
 
     </link>
 
@@ -264,7 +274,7 @@
 
     <!-- Plugin per Rotore 1 -->
     <plugin filename="ignition-gazebo-multicopter-motor-model-system"
-      name="gz::sim::systems::MulticopterMotorModel">
+      name="ignition::gazebo::systems::MulticopterMotorModel">
       <robotNamespace>qr4</robotNamespace>
       <jointName>motor-1</jointName>
       <linkName>rotor-1_propeller</linkName>
@@ -285,7 +295,7 @@
 
     <!-- Plugin per Rotore 2 -->
     <plugin filename="ignition-gazebo-multicopter-motor-model-system"
-      name="gz::sim::systems::MulticopterMotorModel">
+      name="ignition::gazebo::systems::MulticopterMotorModel">
       <robotNamespace>qr4</robotNamespace>
       <jointName>motor-2</jointName>
       <linkName>rotor-2_propeller</linkName>
@@ -306,7 +316,7 @@
 
     <!-- Plugin per Rotore 3 -->
     <plugin filename="ignition-gazebo-multicopter-motor-model-system"
-      name="gz::sim::systems::MulticopterMotorModel">
+      name="ignition::gazebo::systems::MulticopterMotorModel">
       <robotNamespace>qr4</robotNamespace>
       <jointName>motor-3</jointName>
       <linkName>rotor-3_propeller</linkName>
@@ -327,7 +337,7 @@
 
     <!-- Plugin per Rotore 4 -->
     <plugin filename="ignition-gazebo-multicopter-motor-model-system"
-      name="gz::sim::systems::MulticopterMotorModel">
+      name="ignition::gazebo::systems::MulticopterMotorModel">
       <robotNamespace>qr4</robotNamespace>
       <jointName>motor-4</jointName>
       <linkName>rotor-4_propeller</linkName>

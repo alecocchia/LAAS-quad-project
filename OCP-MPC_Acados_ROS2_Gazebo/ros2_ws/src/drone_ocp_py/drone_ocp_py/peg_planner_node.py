@@ -60,6 +60,8 @@ class PegPlannerNode(Node):
         # Publisher per il Path completo (usato dal controllore)
         self.path_pub = self.create_publisher(Path, '/peg_path', qos_profile)
 
+        self.path_finished_pub = self.create_publisher(Bool, '/peg_path_finished', qos_profile)
+
         # Publisher per la singola Pose (usato per la visualizzazione in tempo reale)
         # Sostituito da PoseStamped per includere il frame di riferimento
         self.pose_pub = self.create_publisher(PoseStamped, '/peg_pose', 1)
@@ -133,6 +135,9 @@ class PegPlannerNode(Node):
     def publish_next_pose(self):
         """Pubblica la prossima posa dell'oggetto e gestisce la fine della traiettoria."""
         if self.current_index >= len(self.traj_time):
+            is_finished = Bool()
+            is_finished.data = True
+            self.path_finished_pub.publish(is_finished)
             self.get_logger().info("Fine traiettoria. L'oggetto rimarrà nella posizione finale.")
             self.timer.cancel()
             return
