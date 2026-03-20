@@ -2,6 +2,7 @@
 import argparse, numpy as np
 import matplotlib.pyplot as plt
 import shutil, matplotlib as mpl
+from scipy.spatial.transform import Rotation  # <-- NUOVO IMPORT
 
 # =======================
 #  Funzioni di plot
@@ -152,8 +153,9 @@ def main():
     vref = data['vref']   if 'vref'   in data.files else np.empty((0,3))  # (N,3)
     p    = data['p']      if 'p'      in data.files else np.empty((0,4))  # (N,4) [x,y,z,yaw]
     v    = data['v']      if 'v'      in data.files else np.empty((0,3))  # (N,3)
+    q    = data['q']      if 'q'      in data.files else np.empty((0,4))  # <-- AGGIUNTO ESTRAZIONE QUATERNIONE
 
-    # (NUOVO) RPY e velocità angolari + riferimenti
+    # RPY e velocità angolari + riferimenti
     rpy      = data['rpy']      if 'rpy'      in data.files else np.empty((0,3))  # (N,3) [roll,pitch,yaw]
     omega    = data['omega']    if 'omega'    in data.files else np.empty((0,3))  # (N,3) [wx,wy,wz]
     pref_rpy = data['pref_rpy'] if 'pref_rpy' in data.files else np.empty((0,3))
@@ -162,12 +164,16 @@ def main():
     wrench_cmd = data['wrench_cmd'] if 'wrench_cmd' in data.files else np.empty((0,4))
     wrench_ref = data['wrench_ref'] if 'wrench_ref' in data.files else np.empty((0,4))
 
-    # Tronca tutto alla stessa lunghezza minima utile
-    N = min([arr.shape[0] for arr in [t, pref, p, v, rpy, omega] if arr.size > 0] + [t.shape[0]])
+    peg_pos = data['peg_pos'] if 'peg_pos' in data.files else np.empty((0,3))
+    online_ref = data['online_ref'] if 'online_ref' in data.files else np.empty((0,6))
+
+    # Tronca tutto alla stessa lunghezza minima utile (aggiunto q)
+    N = min([arr.shape[0] for arr in [t, pref, p, v, q, rpy, omega, peg_pos, online_ref] if arr.size > 0] + [t.shape[0]])
     t = t[:N]
     if pref.size:      pref      = pref[:N]
     if p.size:         p         = p[:N]
     if v.size:         v         = v[:N]
+    if q.size:         q         = q[:N]   # <-- AGGIUNTO TRONCAMENTO QUATERNIONE
     if vref.size:      vref      = vref[:N]
     if rpy.size:       rpy       = rpy[:N]
     if pref_rpy.size:  pref_rpy  = pref_rpy[:N]
@@ -175,6 +181,8 @@ def main():
     if omegaref.size:  omegaref  = omegaref[:N]
     if wrench_cmd.size: wrench_cmd = wrench_cmd[:N]
     if wrench_ref.size: wrench_ref = wrench_ref[:N]
+    if peg_pos.size: peg_pos = peg_pos[:N]
+    if online_ref.size: online_ref = online_ref[:N]
 
     print("t:", t.shape, "pref:", pref.shape, "p:", p.shape, "v:", v.shape, "wrench:", wrench_cmd.shape, "wrench_ref:", wrench_ref.shape)
     if p.size:
@@ -183,6 +191,46 @@ def main():
         print("v stats:", np.nanmin(v, axis=0), np.nanmax(v, axis=0))
     if wrench_cmd.size:
         print("wrench stats:", np.nanmin(wrench_cmd, axis=0), np.nanmax(wrench_cmd, axis=0))
+
+    # === CALCOLI GEOMETRICI ===
+    actual_dist = np.empty((0,))
+    desired_pos = np.empty((0,3))
+    Y_c = np.empty((0,))
+    Z_c = np.empty((0,))
+
+    if p.size and peg_pos.size and online_ref.size and q.size:
+        # 1. Distanza effettiva (Norma del vettore PosDrone - PosPeg)
+        actual_dist = np.linalg.norm(p[:, :3] - peg_pos, axis=1)
+
+        # 2. Posa Cartesiana Desiderata (da sferiche a X,Y,Z)
+        r = online_ref[:, 0]
+        pan = online_ref[:, 1]
+        tilt = online_ref[:, 2]
+
+        des_x = peg_pos[:, 0] + r * np.cos(tilt) * np.cos(pan)
+        des_y = peg_pos[:, 1] + r * np.cos(tilt) * np.sin(pan)
+        des_z = peg_pos[:, 2] + r * np.sin(tilt)
+        desired_pos = np.column_stack((des_x, des_y, des_z))
+
+        # 3. Calcolo Y_c e Z_c (Errore Visual Servoing)
+        # Offset camera (Modifica se hai valori diversi da 0 nel parametro del nodo)
+        cam_offset = np.array([0.0, 0.0, 0.0]) 
+
+        # Il logger salva q come (w, x, y, z). Scipy usa (x, y, z, w). Riorganizziamo:
+        q_scipy = np.column_stack((q[:, 1], q[:, 2], q[:, 3], q[:, 0]))
+        rots = Rotation.from_quat(q_scipy) # Vettore di N rotazioni
+
+        # Posizione della camera nel mondo: p_cam = p + R * d_cam
+        p_cam = p[:, :3] + rots.apply(cam_offset)
+
+        # Vettore dal centro camera all'oggetto, in terna World
+        p_rel_world = peg_pos - p_cam
+
+        # Ruotiamo il vettore nella terna Body/Camera (P_c = R^T * p_rel_world)
+        P_c = rots.inv().apply(p_rel_world)
+
+        Y_c = P_c[:, 1]
+        Z_c = P_c[:, 2]
 
     # --- POSIZIONE ---
     if p.size and pref.size:
@@ -193,6 +241,40 @@ def main():
     elif p.size:
         myPlot(t, p[:, :3], labels=[r"$x$", r"$y$", r"$z$"],
                title="Position: simulation", ncols=3, use_tex=args.tex)
+
+    # --- 1. PLOT DELLA DISTANZA RADIALE ---
+    if actual_dist.size and not np.isnan(actual_dist).all():
+        myPlotWithReference(
+            t, 
+            [online_ref[:, 0]],  # online_ref[:,0] è il raggio desiderato
+            actual_dist,         # Distanza reale calcolata
+            labels=[r"$Radius\ [m]$"],
+            title="Tracking: Distanza reale vs Distanza Desiderata",
+            ncols=1, use_tex=args.tex
+        )
+
+    # --- 2. PLOT DELLA POSIZIONE CARTESIANA ASSOLUTA (Drone vs Target) ---
+    if desired_pos.size and not np.isnan(desired_pos).all():
+        myPlotWithReference(
+            t, 
+            [desired_pos],       # Posa X,Y,Z convertita dalle sferiche
+            p[:, :3],            # Posa reale del drone (odometria)
+            labels=[r"$X\ [m]$", r"$Y\ [m]$", r"$Z\ [m]$"],
+            title="Tracking: Posa Reale Drone vs Posa Target",
+            ncols=3, use_tex=args.tex
+        )
+        
+    # --- 3. PLOT DEGLI ERRORI VISIVI (Y_c, Z_c) ---
+    if Y_c.size and not np.isnan(Y_c).all():
+        zeros_ref = np.zeros_like(Y_c)  # Il riferimento visivo è costante a 0
+        myPlotWithReference(
+            t,
+            [np.column_stack((zeros_ref, zeros_ref))],  # Ref = [0, 0]
+            np.column_stack((Y_c, Z_c)),                # Sim = [Y_c, Z_c]
+            labels=[r"$Y_c\ [m]$", r"$Z_c\ [m]$"],
+            title="Visual Servoing: Errore sul piano immagine (Y_c, Z_c)",
+            ncols=2, use_tex=args.tex
+        )
 
     # --- VELOCITÀ ---
     # Se vref contiene NaN (logger quando non c'è twist), plottiamo solo v.

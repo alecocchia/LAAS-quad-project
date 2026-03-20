@@ -75,13 +75,16 @@
       <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Sky</uri>
       <name>my_sky_HD</name>
     </include>
-    
+    -->
+
+    <!--
     <include>
       <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Radio tower</uri>
       <name>Radio_tower</name>
-      <pose>5 5 0 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
     </include>
     -->
+    
 
     <!--
     <include>
@@ -124,11 +127,12 @@
     </include>
     -->
     
+    <!--
     <include>
       <uri>model://Coast Water</uri>
       <name>my_sea</name>
     </include>
-
+    -->
     <include>
       <uri>model://peg</uri>
       <name>my_peg</name>

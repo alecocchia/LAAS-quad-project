@@ -17,7 +17,7 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
 
 from geometry_msgs.msg import PoseStamped, TwistStamped, TransformStamped, Wrench
 from nav_msgs.msg import Path, Odometry
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, String, Float64MultiArray
 
 import numpy as np
 import casadi as ca
@@ -86,7 +86,7 @@ class MpcPlannerNode(Node):
         # === Tempo/Orizzonte (coerenti con OCP) ===
         self.Tf = 20.0
         self.Tp = 1 # tempo di predizione (finestra MPC)
-        self.ts = 0.05  # MPC va a 1/0.02 = 50 Hz
+        self.ts = 0.03  # MPC va a 1/0.03 = 33 Hz
         self.ts_peg = 0.005
         self.N_horiz = int(self.Tf / self.ts)
 
@@ -124,7 +124,7 @@ class MpcPlannerNode(Node):
         self.current_ref = self.ref.copy()  # aggiornabile via /human_goal
 
         # --- parametro: durata override umana (s) ---
-        self.declare_parameter('human_hold_ref', 5.0)
+        self.declare_parameter('human_hold_ref', 0.1)
         self.declare_parameter('control_flag',  1)  # 1 -> MPC controller on, 0 -> MPC controller off
 
         control_flag = self.get_parameter('control_flag').get_parameter_value().integer_value
@@ -169,13 +169,14 @@ class MpcPlannerNode(Node):
         self.single_twist_pub = self.create_publisher(TwistStamped, '/optimal_drone_twist', 1)
         self.single_wrench_pub = self.create_publisher(Wrench, wrench_topic_name, 1)
         self.tf_broadcaster   = tf2_ros.TransformBroadcaster(self)
+        self.ref_pub = self.create_publisher(Float64MultiArray, '/online_ref', 1)
 
         # === Trigger di start ( come nell’OCP) ===
         self.control_timer = None
         self.start_subscription = self.create_subscription(PoseStamped, '/peg_pose', self.start_callback, 10)
 
         # === Goal umano per ref dinamico ===
-        self.human_goal_sub = self.create_subscription(PoseStamped, 'human_goal', self.human_goal_callback, 10)
+        self.human_goal_sub = self.create_subscription(Float64MultiArray, 'human_goal', self.human_goal_callback, 10)
 
         self.get_logger().info("MPC Planner Node (planner-only) avviato. In attesa di /peg_path e /peg_pose.")
 
@@ -281,31 +282,30 @@ class MpcPlannerNode(Node):
         t.transform.rotation = msg.pose.pose.orientation
         self.tf_broadcaster.sendTransform(t)
 
-    def human_goal_callback(self, msg: PoseStamped):
+    def human_goal_callback(self, msg: Float64MultiArray):
         """
-        Quando arriva un human_goal:
-          - converti in [r, pan, tilt, roll, pitch, yaw]
-          - attiva override fino a now + human_hold_s (param)
+        Quando arriva un human_goal (Array di 3 elementi: r, pan, tilt):
+          - lo espande a 6 elementi aggiungendo [0, 0, 0] per rpy 
+            (l'assetto è gestito in automatico dal Visual Servoing)
+          - attiva override fino a now + human_hold_s
         """
-        r = float(msg.pose.position.x)
-        pan = float(msg.pose.position.y)
-        tilt = float(msg.pose.position.z)
-        q = msg.pose.orientation
-        rpy = quat_to_RPY([q.w, q.x, q.y, q.z]).full().squeeze()
-        roll, pitch, yaw = float(rpy[0]), float(rpy[1]), float(rpy[2])
+        if len(msg.data) >= 3:
+            r = float(msg.data[0])
+            pan = float(msg.data[1])
+            tilt = float(msg.data[2])
+            
+            # online_ref richiede 6 elementi: [r, pan, tilt, roll, pitch, yaw]
+            self.hgoal_ref = np.array([r, pan, tilt, 0.0, 0.0, 0.0], dtype=float)
 
-        self.hgoal_ref = np.array([r, pan, tilt, roll, pitch, yaw], dtype=float)
+            hold_human_ref = float(self.get_parameter('human_hold_ref').value)
+            now = self.get_clock().now()
+            from rclpy.duration import Duration
+            self.hgoal_until = now + Duration(seconds=hold_human_ref)
 
-        hold_human_ref = float(self.get_parameter('human_hold_ref').value)
-        now = self.get_clock().now()
-        # scadenza override
-        from rclpy.duration import Duration
-        self.hgoal_until = now + Duration(seconds=hold_human_ref)
-
-        self.get_logger().info(
-            f"human_goal ricevuto → override per {hold_human_ref:.2f}s | "
-            f"ref: r={r:.2f}, pan={pan:.2f}, tilt={tilt:.2f}, rpy=({roll:.2f},{pitch:.2f},{yaw:.2f})"
-        )
+            self.get_logger().info(
+                f"human_goal ricevuto → override per {hold_human_ref:.2f}s | "
+                f"ref: r={r:.2f}, pan={pan:.2f}, tilt={tilt:.2f}"
+            )
 
     # ==================== Configurazione e Solve ====================
 
@@ -313,12 +313,14 @@ class MpcPlannerNode(Node):
         """Configura il solver MPC (chiamata allo START, non in peg_path_callback)."""
         # Pesi/limiti in linea con OCP (coerenza)
         # Limiti operativi massimi (Normalizzazione)
-        D = 10.0           # 10 metri max errore accettabile
+        D = 5           # 10 metri max distanza
+        PANTILT = pi 
         V = 5.0            # 5 m/s max velocità operativa
-        ANG = 1.0          # ~60 gradi max deviazione 
-        ANG_DOT = 2.0      # 2 rad/s max rateo (reso un pelo più agile)
+        ANG = 2 * pi       # angolo giro 
+        ANG_DOT = 2.0      # 2 rad/s max
         ACC = 10.0         # 10 m/s^2 (~1g) di accelerazione lineare
-        ACC_ANG = 11.0     # 11 rad/s^2 (Il vero limite fisico: 0.25 Nm / 0.023 kgm^2)
+        ACC_ANG = 11.0     # 11 rad/s^2 (Limite fisico: 0.25 Nm / 0.023 kgm^2)
+        VISUAL = 2         # Y_max = r * tan (FoV_h/2), Y_max = r * tan (FoV_v/2)
         JERK = 20.0
         SNAP = 200.0
         U_F = 40.0         # 40 N max thrust
@@ -326,16 +328,14 @@ class MpcPlannerNode(Node):
         U_TAU_Z = 0.15     # Max coppia Yaw
 
         # Pesi
-        Q_pos = np.diag([5, 5, 5]) / D**2
-        Q_vel = np.diag([1, 1, 1]) / V**2
+        Q_pos = np.diag([30,30,30]) / [D**2, PANTILT**2, PANTILT**2]
+        Q_visual = np.diag([3,3]) / VISUAL**2 # Y_c e Z_c
+        Q_vel = np.diag([4, 4, 4]) / V**2
+        Q_rot = np.diag([0.1, 0.1]) / ANG**2  
         
-        # Lasciamo il quaternione basso per permettere al drone di inclinarsi
-        # [w, x, y, z]. Diamo un po' più peso a z (Yaw) rispetto a x,y (Roll/Pitch)
-        Q_rot = np.diag([0.1, 0.1, 0.1, 0.1]) / ANG**2  
-        
-        Q_ang_dot = np.diag([1, 1, 0.01]) / ANG_DOT**2
-        Q_acc = np.diag([1, 1, 1]) / ACC**2
-        Q_acc_ang = np.diag([2, 2, 0.1]) / ACC_ANG**2
+        Q_ang_dot = np.diag([2, 2, 2]) / ANG_DOT**2
+        Q_acc = np.diag([5, 5, 5]) / ACC**2
+        Q_acc_ang = np.diag([3, 3, 3]) / ACC_ANG**2
         Q_jerk = np.diag([2, 2, 2]) / JERK**2
         Q_snap = np.diag([2, 2, 2]) / SNAP**2
 
@@ -345,10 +345,10 @@ class MpcPlannerNode(Node):
                            0.1 / U_TAU_Z**2)
         
         R = ca.diagcat(R_f, R_tau)
-        Q = ca.diagcat(Q_pos, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_acc_ang, Q_jerk, Q_snap)
+        Q = ca.diagcat(Q_pos, Q_visual, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_acc_ang, Q_jerk, Q_snap)
 
         W   = ca.diagcat(Q, R).full()
-        W_e = 2 * Q.full()
+        W_e = 1* Q.full()
 
         # Adattamento dei ref iniziali a 7 dimensioni per setup_yref_online (X, Y, Z, qw, qx, qy, qz)
         p_init = self.p_obj[0]
@@ -429,7 +429,7 @@ class MpcPlannerNode(Node):
             #rpy_target[2] = current_yaw + yaw_error
             
             # Conversione in quaternione target
-            q_target_scipy = Rotation.from_matrix(R_target).as_quat() # [x,y,z,w]
+            q_target_scipy = Rotation.from_euler('xyz',rpy_target).as_quat() # [x,y,z,w]
             q_target = np.roll(q_target_scipy, 1) # Riordina in [w,x,y,z]
             
             q_current = xk[6:10]    # Quaternione attuale del drone per il Filtro Emisfero
@@ -514,6 +514,11 @@ class MpcPlannerNode(Node):
                 online_ref = self.final_ref # Fase 2: il peg è fermo in posizione finale --> fase di task
             else:
                 online_ref = self.base_ref  # Fase 1: il peg si sta muovendo ed il task ancora deve cominciare
+        
+        # --- PUBBLICAZIONE RIFERIMENTO ONLINE PER IL LOGGER ---
+        ref_msg = Float64MultiArray()
+        ref_msg.data = [float(x) for x in online_ref]
+        self.ref_pub.publish(ref_msg)
 
 
         # Risoluzione MPC (planner)

@@ -16,7 +16,9 @@ def build_yref_online(y_idx, ref_vec):
     # ref_vec ora contiene [X_target, Y_target, Z_target, qw, qx, qy, qz]
     yref[y_idx["pos"]]     = ref_vec[0:3]          # Posizione Cartesiana X, Y, Z
     yref[y_idx["vel"]]     = np.array([0,0,0])
-    yref[y_idx["quat"]]    = ref_vec[3:7]          # Quaternione puro w, x, y, z
+    #yref[y_idx["quat"]]    = ref_vec[3:7]          # Quaternione puro w, x, y, z
+    yref[y_idx["rp"]]      = np.array([0,0])
+    yref[y_idx["visual"]]  = np.array([0,0])
     yref[y_idx["dot_rpy"]] = np.array([0,0,0])
     yref[y_idx["acc"]]     = np.array([0,0,0])
     yref[y_idx["acc_ang"]] = np.array([0,0,0])
@@ -88,6 +90,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     
     # Derivata per Euler rates (necessario per il costo sulle velocità angolari)
     rpy_expr = quat_to_RPY(q_expr)
+    rp_expr = rpy_expr[0:2]
     w_expr = model.x[10:]
     dot_rpy = angularVel_to_EulerRates(rpy_expr[0],rpy_expr[1],rpy_expr[2],w_expr)
 
@@ -158,7 +161,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
     ocp.solver_options.integrator_type = 'ERK'
     ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-    #ocp.solver_options.qp_solver_cond_N = 5 # Scommentare per abilitare un condensing parziale per velocizzare ulteriormente
+    #ocp.solver_options.qp_solver_cond_N = 5 # Scommentare per abilitare un condensing parziale per velocizzare ulteriormente (fake)
     ocp.solver_options.nlp_solver_type = 'SQP_RTI'
     ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 
@@ -188,8 +191,8 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     ocp.constraints.idxsh = np.array(range(n_soft_h))
 
     # Usare valori strettamente positivi
-    penalty_L1 = 1e0
-    penalty_L2 = 1e1
+    penalty_L1 = 1e1
+    penalty_L2 = 1e2
     weights_costs = np.array([1, 1, 1, 1, 1])
 
     ocp.cost.Zl = penalty_L2 * weights_costs
@@ -208,8 +211,10 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     # Cost function quantities (expressed with respect to state and control)
     y_expr = ca.vertcat(
         p_cam_expr,                     # Posizione attuale della camera (X,Y,Z)
+        Y_c,
+        Z_c,
         v_expr,                         # velocity
-        q_expr,                         # Orientamento attuale (w,x,y,z)
+        rp_expr,                         # Orientamento attuale (w,x,y,z)
         dot_rpy,                        # Euler rates
         acc_expr,                       # acceleration
         acc_ang_expr,                   # angular acceleration
@@ -221,8 +226,10 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     # Terminal cost exrpession
     y_expr_e = ca.vertcat(
         p_cam_expr,                     # Posizione attuale (X,Y,Z)
+        Y_c,
+        Z_c,
         v_expr,                         # velocity
-        q_expr,                         # Orientamento attuale (w,x,y,z)
+        rp_expr,                         # Orientamento attuale (w,x,y,z)
         dot_rpy,                        # Euler rates
         acc_hover,                      # acceleration
         acc_ang_hover,
@@ -247,6 +254,8 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     '''
     
     # Definition of constant references for derivatives
+    visual_ref = np.array([0,0])
+    rp_ref = np.array([0,0]) #roll and pitch refs
     dot_rpy_ref = np.array([0,0,0])
     v_ref=np.array([0,0,0])
     acc_ref=np.array([0,0,0])
@@ -258,10 +267,11 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
     # Indexes (Aggiornati per le nuove dimensioni: pos=3, quat=4)
     pos_ind = slice(0,3)
-    vel_ind = slice(pos_ind.stop,pos_ind.stop+3)
-    #rpy_ind = slice(vel_ind.stop, vel_ind.stop+4)
-    quat_ind = slice(vel_ind.stop, vel_ind.stop+4)
-    dot_rpy_ind = slice(quat_ind.stop,quat_ind.stop+3)
+    visual_ind = slice(pos_ind.stop,pos_ind.stop+2)
+    vel_ind = slice(visual_ind.stop,visual_ind.stop+3)
+    rp_ind = slice(vel_ind.stop, vel_ind.stop+2)
+    #quat_ind = slice(vel_ind.stop, vel_ind.stop+4)
+    dot_rpy_ind = slice(rp_ind.stop,rp_ind.stop+3)
     acc_ind = slice(dot_rpy_ind.stop,dot_rpy_ind.stop+3)
     acc_ang_ind = slice(acc_ind.stop,acc_ind.stop+3)
     jerk_ind = slice(acc_ang_ind.stop,acc_ang_ind.stop+3)   
@@ -270,8 +280,9 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
     y_idx = {
         "pos": pos_ind,
+        "visual": visual_ind,
         "vel": vel_ind,
-        "quat": quat_ind,
+        "rp": rp_ind,
         "dot_rpy": dot_rpy_ind,
         "acc": acc_ind,
         "acc_ang": acc_ang_ind,
@@ -287,8 +298,9 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
     # ASSIGN REFERENCES (Dummy initial references, they will be overwritten online)
     yref[pos_ind]= ref[0:3]         # Target assoluto X, Y, Z
+    yref[visual_ind]=visual_ref
     yref[vel_ind]=v_ref             
-    yref[quat_ind]= ref[3:7]        # Target assoluto w,x,y,z
+    yref[rp_ind]= rp_ref
     yref[dot_rpy_ind]=dot_rpy_ref   
     yref[acc_ind]=acc_ref           
     yref[acc_ang_ind]=acc_ang_ref
@@ -298,7 +310,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
     new_ref = yref.copy()
     new_ref[pos_ind]=final_ref[0:3]
-    new_ref[quat_ind]=final_ref[3:7]
+    #new_ref[quat_ind]=final_ref[3:7]
 
     yref_e = new_ref[:y_expr_e.numel()]  
 

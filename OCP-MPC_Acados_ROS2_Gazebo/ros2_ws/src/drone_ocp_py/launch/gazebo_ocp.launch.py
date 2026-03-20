@@ -9,9 +9,6 @@ import os
 import xml.etree.ElementTree as ET
 from ament_index_python.packages import get_package_share_directory
 
-################# CAMBIARE : DARE LA POSSIBILITA' TRAMITE PARAMETRO DI DECIDERE SE MPC PUBBLICA SU OPTIMAL_WRENCH O WRENCH_CMD
-################# COS'ALTRO AGGIUSTARE: FORSE  DISCONTINUITÀ A +-PI NEL PLANNER (provare a non passare per rpy -> Rot mat direttamente e q)
-################# INTRODURRE COMANDI CONTROLLER
 
 def get_pose_from_world(world_path, target_keyword):
     """
@@ -115,6 +112,13 @@ def generate_launch_description():
         description="Avvia l'human_goal_node (listener Float64MultiArray → PoseStamped)?"
     )
     enable_human = LaunchConfiguration('enable_human')
+
+    # --- argomento opzionale per abilitare il joystick ---
+    enable_joy_arg = DeclareLaunchArgument(
+        'enable_joy', default_value='true',
+        description="Avvia il nodo joy per leggere il joypad"
+    )
+    enable_joy = LaunchConfiguration('enable_joy')
 
     # --- launch configs ---
     planner_mode = LaunchConfiguration('planner_mode')
@@ -222,6 +226,18 @@ def generate_launch_description():
         condition=IfCondition(enable_human),
     )    
 
+    # Nodo Joy (Driver Joystick)
+    joy_node = Node(
+        package='joy',
+        executable='joy_node',
+        name='joy_node',
+        parameters=[{
+            'autorepeat_rate': 50.0,
+            'deadzone': 0.05,
+        }],
+        condition=IfCondition(enable_joy),
+    )
+
     # planner_mode 2: OCP online
     ocp_planner = Node(
         package='drone_ocp_py',
@@ -326,7 +342,7 @@ def generate_launch_description():
 
 
     return LaunchDescription([
-        planner_mode_arg, controller_arg, log_file_arg, enable_rviz_arg, enable_human_arg, MPC_controller_arg,
+        planner_mode_arg, controller_arg, log_file_arg, enable_rviz_arg, enable_human_arg, enable_joy_arg, MPC_controller_arg,
 
         gz_sim,
         ros_gz_bridge,
@@ -342,6 +358,7 @@ def generate_launch_description():
         geom_ctrl,
 
         human_goal_node,
+        joy_node,
 
         logger,
         rviz,

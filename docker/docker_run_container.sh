@@ -114,6 +114,7 @@ docker rm "${CONTAINER_NAME}" &> /dev/null
 
 docker run -it --rm \
     ${DOCKER_GPU_ARGS} \
+    --privileged -v /dev/input:/dev/input \
     --name="${CONTAINER_NAME}" \
     --net=host \
     -e DISPLAY="${DISPLAY}" \

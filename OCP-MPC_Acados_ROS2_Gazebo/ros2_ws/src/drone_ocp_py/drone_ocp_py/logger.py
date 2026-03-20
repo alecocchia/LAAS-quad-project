@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, TwistStamped, Wrench
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Float64MultiArray
 import numpy as np
 from math import atan2
 from drone_ocp_py.common import quat_to_R
@@ -78,6 +79,16 @@ class Logger(Node):
         self.wrench_cmd = []  # (Fz, tx, ty, tz)
         self.wrench_ref = []  # (Fz, tx, ty, tz)
         self.t_ref = []       # timestamps arrivo pose ref (diagnostica)
+
+        # Aggiunta di peg e online_ref
+        self.peg_pos = []
+        self.last_peg_pos = None
+
+        self.online_ref = []
+        self.last_online_ref = None
+
+        self.create_subscription(PoseStamped, '/peg_pose', self.cb_peg_pose, 10)
+        self.create_subscription(Float64MultiArray, '/online_ref', self.cb_online_ref, 10)
 
         # --- ultimo riferimento noto (latch) ---
         self.last_pref_pos  = None
@@ -191,7 +202,16 @@ class Logger(Node):
         self.wrench_cmd.append(self.last_w_cmd if self.last_w_cmd is not None else [np.nan]*4)
         self.wrench_ref.append(self.last_w_ref if self.last_w_ref is not None else [np.nan]*4)
 
+        self.peg_pos.append(self.last_peg_pos if self.last_peg_pos is not None else [np.nan]*3)
+        self.online_ref.append(self.last_online_ref if self.last_online_ref is not None else [np.nan]*6)
+
         self.last_log_time = t_now
+
+    def cb_peg_pose(self, msg: PoseStamped):
+        self.last_peg_pos = [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]
+
+    def cb_online_ref(self, msg: Float64MultiArray):
+        self.last_online_ref = list(msg.data)    
 
     def save(self):
         T = np.asarray(self.t)
@@ -224,9 +244,13 @@ class Logger(Node):
             # wrench
             wrench_cmd=np.asarray(self.wrench_cmd) if len(self.wrench_cmd) else np.empty((0,4)),
             wrench_ref=np.asarray(self.wrench_ref) if len(self.wrench_ref) else np.empty((0,4)),
+
+            # peg e online ref
+            peg_pos=np.asarray(self.peg_pos) if len(self.peg_pos) else np.empty((0,3)),
+            online_ref=np.asarray(self.online_ref) if len(self.online_ref) else np.empty((0,6)),
         )
 
-        # --- PATCH: aggiungi 'pref' retro-compatibile (x,y,z,yaw) ---
+        # --- PATCH: aggiunta 'pref' retro-compatibile (x,y,z,yaw) ---
         if len(self.pref_pos) and len(self.pref_rpy):
             try:
                 pos = np.asarray(self.pref_pos)

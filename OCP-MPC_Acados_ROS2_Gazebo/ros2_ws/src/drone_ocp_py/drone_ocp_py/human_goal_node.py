@@ -4,99 +4,105 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from std_msgs.msg import Float64MultiArray
-from geometry_msgs.msg import PoseStamped
-
-def euler_to_quat(roll: float, pitch: float, yaw: float):
-    """ZYX convention (roll=X, pitch=Y, yaw=Z)."""
-    cy, sy = math.cos(yaw * 0.5),   math.sin(yaw * 0.5)
-    cp, sp = math.cos(pitch * 0.5), math.sin(pitch * 0.5)
-    cr, sr = math.cos(roll * 0.5),  math.sin(roll * 0.5)
-    w = cr*cp*cy + sr*sp*sy
-    x = sr*cp*cy - cr*sp*sy
-    y = cr*sp*cy + sr*cp*sy
-    z = cr*cp*sy - sr*sp*cy
-    return w, x, y, z
+from sensor_msgs.msg import Joy
 
 class HumanGoalNode(Node):
     """
-    Converte un Float64MultiArray in PoseStamped e lo pubblica una sola volta su 'human_goal'.
-    Formati accettati:
-      - [r, pan, tilt, yaw]                (roll=pitch=0)
-      - [r, pan, tilt, roll, pitch, yaw]
-
-    Usage:
-    ros2 topic pub -1 /human_goal_vec std_msgs/msg/Float64MultiArray "{data: [2.8, 0.2, 0.0, 1.57]}"
+    Nodo ibrido per teleoperazione telecamera.
+    Legge comandi discreti da 'human_goal_vec' o integrati da '/joy'.
+    Pubblica un array [r, pan, tilt] su 'human_goal'.
     """
     def __init__(self):
         super().__init__('human_goal_node')
 
-        # Parametri
-        self.declare_parameter('frame_id', 'world')
-        self.declare_parameter('cmd_topic', 'human_goal_vec')   # Float64MultiArray in ingresso
-        self.declare_parameter('goal_topic', 'human_goal')      # PoseStamped in uscita
+        self.declare_parameter('cmd_topic', 'human_goal_vec')
+        self.declare_parameter('goal_topic', 'human_goal')
 
-        frame_id  = str(self.get_parameter('frame_id').value) or 'world'
         cmd_topic = str(self.get_parameter('cmd_topic').value) or 'human_goal_vec'
         out_topic = str(self.get_parameter('goal_topic').value) or 'human_goal'
 
-        # QoS: affidabile, buffer minimo
-        qos_in = QoSProfile(depth=1)
-        qos_in.reliability = QoSReliabilityPolicy.RELIABLE
-        qos_in.history = QoSHistoryPolicy.KEEP_LAST
+        qos_in = QoSProfile(depth=1, reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST)
+        qos_out = QoSProfile(depth=1, reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST)
+        qos_sensor = QoSProfile(depth=10)
 
-        qos_out = QoSProfile(depth=1)
-        qos_out.reliability = QoSReliabilityPolicy.RELIABLE
-        qos_out.history = QoSHistoryPolicy.KEEP_LAST
+        # Publisher ora è Float64MultiArray
+        self.goal_pub = self.create_publisher(Float64MultiArray, out_topic, qos_out)
+        
+        # Subscribers
+        self.sub = self.create_subscription(Float64MultiArray, cmd_topic, self.cmd_cb, qos_in)
+        self.ref_sub = self.create_subscription(Float64MultiArray, '/online_ref', self.ref_cb, qos_in)
+        self.joy_sub = self.create_subscription(Joy, '/joy', self.joy_cb, qos_sensor)
 
-        # Publisher e subscriber
-        self.goal_pub = self.create_publisher(PoseStamped, out_topic, qos_out)
-        self.sub = self.create_subscription(
-            Float64MultiArray, cmd_topic, self.cmd_cb, qos_in
-        )
+        # FIX 1: Inizializzato con coordinate di base invece di "None"
+        self.current_spherical_ref = [2.0, 0.0, 0.0]  
+        self.joy_active = False
+        self.axes = [0.0] * 8
 
-        self._frame_id = frame_id
-        self.get_logger().info(
-            f"human_goal_node attivo. Ascolto '{cmd_topic}' (Float64MultiArray) "
-            f"→ pubblico '{out_topic}' (PoseStamped). frame_id='{frame_id}'."
-        )
+        # Parametri Joystick
+        self.dt = 0.02
+        self.v_pan_max = 0.5   
+        self.v_tilt_max = 0.5  
+        self.v_r_max = 1.0     
+        
+        self.timer = self.create_timer(self.dt, self.control_loop)
+        self.get_logger().info(f"Human Goal Node attivo. In attesa di comandi joypad...")
+
+    def ref_cb(self, msg: Float64MultiArray):
+        if not self.joy_active and len(msg.data) >= 3:
+            self.current_spherical_ref = [msg.data[0], msg.data[1], msg.data[2]]
+
+    def joy_cb(self, msg: Joy):
+        self.axes = msg.axes
+        
+        # FIX 2: Ignoriamo i grilletti posteriori (L2/R2) che hanno valore di riposo 1.0
+        # Controlliamo solo gli assi che ci interessano (0, 1 e 4)
+        if len(self.axes) >= 5:
+            active_axes = [self.axes[0], self.axes[1], self.axes[4]]
+            self.joy_active = any(abs(a) > 0.05 for a in active_axes)
 
     def cmd_cb(self, msg: Float64MultiArray):
-        data = list(msg.data) if msg.data is not None else []
-        n = len(data)
+        if len(msg.data) < 3:
+            return
+        
+        self.current_spherical_ref = [float(msg.data[0]), float(msg.data[1]), float(msg.data[2])]
+        self.joy_active = False
+         
+        self.publish_goal()
 
-        if n not in (4, 6):
-            self.get_logger().warn(
-                f"Comando ignorato: attesi 4 o 6 elementi, ricevuti {n}. "
-                "Formati: [r,pan,tilt,yaw] oppure [r,pan,tilt,roll,pitch,yaw]."
-            )
+    def control_loop(self):
+        if not self.joy_active:
             return
 
-        # Parsifica
-        r, pan, tilt = float(data[0]), float(data[1]), float(data[2])
-        if n == 4:
-            roll, pitch, yaw = 0.0, 0.0, float(data[3])
-        else:
-            roll, pitch, yaw = float(data[3]), float(data[4]), float(data[5])
+        pan_cmd  = self.axes[0]
+        tilt_cmd = self.axes[1]
+        r_cmd    = self.axes[4]
 
-        # Costruisci PoseStamped (interpretando pos = [r,pan,tilt])
-        out = PoseStamped()
-        out.header.stamp = self.get_clock().now().to_msg()
-        out.header.frame_id = self._frame_id
-        out.pose.position.x = r
-        out.pose.position.y = pan
-        out.pose.position.z = tilt
-        qw, qx, qy, qz = euler_to_quat(roll, pitch, yaw)
-        out.pose.orientation.w = qw
-        out.pose.orientation.x = qx
-        out.pose.orientation.y = qy
-        out.pose.orientation.z = qz
+        self.current_spherical_ref[1] += pan_cmd * self.v_pan_max * self.dt
+        self.current_spherical_ref[2] += tilt_cmd * self.v_tilt_max * self.dt
+        self.current_spherical_ref[0] += r_cmd * self.v_r_max * self.dt
 
-        # Pubblica UNA VOLTA (l'MPC gestisce l'hold)
-        self.goal_pub.publish(out)
-        self.get_logger().info(
-            f"human_goal pubblicato: r={r:.2f}, pan={pan:.2f}, tilt={tilt:.2f}, "
-            f"rpy=({roll:.2f},{pitch:.2f},{yaw:.2f})"
-        )
+        # Limiti
+        # 1. Limiti sul Raggio (Zoom)
+        r_min = 0.5  # Non avvicinarsi a meno di 50 cm
+        r_max = 8.0  # Non allontanarsi a più di 8 metri
+        self.current_spherical_ref[0] = max(r_min, min(r_max, self.current_spherical_ref[0]))
+        #2. Limiti sul Tilt (Altezza)
+        max_tilt = 30.0 * math.pi / 180.0
+        self.current_spherical_ref[2] = max(-max_tilt, min(max_tilt, self.current_spherical_ref[2]))
+        # Wrap-Around del pan orbitare a 360° infinitamente
+        # Mantiene il valore sempre pulito nel range [-pi, +pi] senza bloccare il volo
+        self.current_spherical_ref[1] = (self.current_spherical_ref[1] + math.pi) % (2 * math.pi) - math.pi
+        self.publish_goal()
+
+    def publish_goal(self):
+        msg = Float64MultiArray()
+        # Invia solo r, pan, tilt
+        msg.data = [
+            float(self.current_spherical_ref[0]),
+            float(self.current_spherical_ref[1]),
+            float(self.current_spherical_ref[2])
+        ]
+        self.goal_pub.publish(msg)
 
 def main():
     rclpy.init()
@@ -105,8 +111,9 @@ def main():
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
-    node.destroy_node()
-    rclpy.shutdown()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == "__main__":
     main()
