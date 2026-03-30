@@ -86,8 +86,8 @@ class MpcPlannerNode(Node):
 
         # === Tempo/Orizzonte (coerenti con OCP) ===
         self.Tf = 20.0
-        num_campioni = 20
-        self.ts = 0.02  # MPC va a 1/0.02 = 50 Hz
+        num_campioni = 50
+        self.ts = 0.01  # MPC va a 1/0.02 = 50 Hz
         self.Tp = num_campioni*self.ts # tempo di predizione (finestra MPC)
         self.ts_peg = 0.005
         self.N_horiz = int(self.Tf / self.ts)
@@ -343,7 +343,7 @@ class MpcPlannerNode(Node):
         # obiettivo primario
         PesoPos = 10.0
         # obiettivo visivo
-        PesoVis = PesoPos / 2 
+        PesoVis = PesoPos / 10 
         #assetto
         PesoRot = PesoPos
         
@@ -352,13 +352,13 @@ class MpcPlannerNode(Node):
         PesoAcc = PesoVel /10
         PesoAngAcc = PesoAngVel/10
         PesoJerk = PesoAcc / 10
-        PesoSnap = PesoJerk
+        PesoSnap = PesoJerk / 10
 
-        PesoForce = PesoPos / 20
+        PesoForce = PesoPos / 100
         PesoTorque = PesoForce*2
 
         Q_pos = np.diag([PesoPos,PesoPos]) / [X**2, Y**2]
-        Q_visual = np.diag([PesoVis,PesoVis*1.5]) / VISUAL**2 # Y_c e Z_c
+        Q_visual = np.diag([PesoVis,PesoVis]) / VISUAL**2 # Y_c e Z_c
         Q_vel = np.diag([PesoVel, PesoVel, PesoVel]) / V**2
         Q_rot = np.diag([PesoRot, PesoRot]) / QUAT**2  
         
@@ -377,7 +377,7 @@ class MpcPlannerNode(Node):
         Q = ca.diagcat(Q_pos, Q_visual, Q_vel, Q_rot, Q_ang_dot, Q_acc, Q_acc_ang, Q_jerk, Q_snap)
 
         W   = ca.diagcat(Q, R).full()
-        W_e = 10* Q.full()
+        W_e = 20* Q.full()
 
         p_init = self.p_obj[0]
         r_init, pan_init, tilt_init = self.ref[0], self.ref[1], self.ref[2]

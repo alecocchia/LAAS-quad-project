@@ -192,8 +192,8 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     ocp.constraints.idxsh = np.array(range(n_soft_h))
 
     # Usare valori strettamente positivi
-    penalty_L1 = 1e3    
-    penalty_L2 = 1e4   
+    penalty_L1 = 1e0    
+    penalty_L2 = 1e1   
     weights_costs = np.array([1, 1, 1, 1, 1])
 
     ocp.cost.Zl = penalty_L2 * weights_costs
