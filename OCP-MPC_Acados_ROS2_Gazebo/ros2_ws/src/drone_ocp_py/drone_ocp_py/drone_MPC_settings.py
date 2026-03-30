@@ -14,10 +14,10 @@ def build_yref_online(y_idx, ref_vec):
     yref = np.zeros(y_idx["u"].stop) 
     
     # ref_vec ora contiene [X_target, Y_target, Z_target, qw, qx, qy, qz]
-    yref[y_idx["pos"]]     = ref_vec[0:3]          # Posizione Cartesiana X, Y, Z
+    yref[y_idx["pos"]]     = ref_vec[0:2]          # Posizione Cartesiana X, Y
     yref[y_idx["vel"]]     = np.array([0,0,0])
     #yref[y_idx["quat"]]    = ref_vec[3:7]          # Quaternione puro w, x, y, z
-    yref[y_idx["rp"]]      = np.array([0,0])
+    yref[y_idx["rp"]]      = np.array([0,0])        # X_c, Y_c (posizione dell'oggetto rispetto alla camera, nella terna camera)
     yref[y_idx["visual"]]  = np.array([0,0])
     yref[y_idx["dot_rpy"]] = np.array([0,0,0])
     yref[y_idx["acc"]]     = np.array([0,0,0])
@@ -65,7 +65,7 @@ def set_initial_state(ocp_solver, xk):
     ocp_solver.set(0, "lbx", xk)
     ocp_solver.set(0, "ubx", xk)
 
-def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(7), final_ref = np.zeros(7)):
+def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(3)):
     
     nx = model.x.rows()
     nu = model.u.rows()
@@ -89,17 +89,20 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     q_expr = model.x[6:10]
     
     # Derivata per Euler rates (necessario per il costo sulle velocità angolari)
-    rpy_expr = quat_to_RPY(q_expr)
-    rp_expr = rpy_expr[0:2]
+    #rpy_expr = quat_to_RPY(q_expr)
+    #rp_expr = rpy_expr[0:2]
+    rp_expr = q_expr[1:3]
     w_expr = model.x[10:]
-    dot_rpy = angularVel_to_EulerRates(rpy_expr[0],rpy_expr[1],rpy_expr[2],w_expr)
+    #dot_rpy = angularVel_to_EulerRates(rpy_expr[0],rpy_expr[1],rpy_expr[2],w_expr)
+    dot_rpy=w_expr
 
     # Rotazione attuale del drone rispetto al world
     R_expr = quat_to_R(q_expr)
 
     # --- Parte visuale --> Sistema camera ---  
     d_cam = ca.DM(camera_offset[0:3]).reshape((3,1))
-    p_cam_expr = p_expr + R_expr @ d_cam   # Posizione della camera nel mondo
+    p_cam = p_expr + R_expr @ d_cam   # Posizione della camera nel mondo
+    p_cam_expr = p_cam[0:2]
 
     fov_h_rad = 80.0 * ca.pi / 180.0
     fov_v_rad = 60.0 * ca.pi / 180.0
@@ -108,7 +111,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     T_v = ca.tan(fov_v_rad / 2.0)
 
     p_obj_expr = model.p[0:3]
-    p_rel_world = p_obj_expr - p_cam_expr
+    p_rel_world = p_obj_expr - p_cam
 
     P_c = R_expr.T @ p_rel_world    # Posa relativa dell'oggetto rispetto alla camera, nella terna camera
 
@@ -129,8 +132,8 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
     #########################################################################################################                   
     #Jerk
-    j_expr = ca.jacobian(acc_expr, model.x) @ xdot                
-    #j_expr= ca.SX.zeros(3,1)
+    #j_expr = ca.jacobian(acc_expr, model.x) @ xdot                
+    j_expr= ca.SX.zeros(3,1)
     #                                                                                          
     # Snap 
     s_expr = ca.jacobian(j_expr, model.x) @ xdot
@@ -149,9 +152,9 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
                                             CONSTRAINTS             
     '''
     ocp.constraints.x0 = x0
-    ocp.constraints.lbx = np.array([0] + [-np.pi/3]*3)  # zmin, wmin  
-    ocp.constraints.ubx = np.array([100] + [np.pi/3]*3)  # zmax, wmax
-    ocp.constraints.idxbx = np.array([2,-3, -2, -1])   
+    ocp.constraints.lbx = np.array([0])  # zmin  
+    ocp.constraints.ubx = np.array([100])  # zmax
+    ocp.constraints.idxbx = np.array([2])   
 
     Fmax = 4*9.8*m  
     Tmax = [0.25, 0.25, 0.15]
@@ -161,11 +164,9 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
     ocp.solver_options.integrator_type = 'ERK'
     ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-    #ocp.solver_options.qp_solver_cond_N = 5 # Scommentare per abilitare un condensing parziale per velocizzare ulteriormente (fake)
+    #ocp.solver_options.qp_solver_cond_N = 5 # Scommentare per abilitare un condensing parziale per velocizzare ulteriormente (fake, non funziona)
     ocp.solver_options.nlp_solver_type = 'SQP_RTI'
-    ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-
-    ################## PROVARE A INCLUDERE I VINCOLI 1 PER VOLTA
+    #ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 
     # ==========================================================
     # Constraints for camera
@@ -181,8 +182,8 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     model.con_h_expr = visual_constr_expr
     
     X_min = 0.5 # Il peg deve stare almeno a X_min DAVANTI alla telecamera (distanza di sicurezza)
-    ocp.constraints.lh = np.array([-100,  0.0, -100,  0.0, X_min])
-    ocp.constraints.uh = np.array([ 0.0,  100,  0.0,  100, 100])
+    ocp.constraints.lh = np.array([-1000,  0.0, -1000,  0.0, X_min])
+    ocp.constraints.uh = np.array([ 0.0,  1000,  0.0,  1000, 100])
 
     # ==========================================================
     # SOFT CONSTRAINTS (Slack Variables)
@@ -191,8 +192,8 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     ocp.constraints.idxsh = np.array(range(n_soft_h))
 
     # Usare valori strettamente positivi
-    penalty_L1 = 1e1
-    penalty_L2 = 1e2
+    penalty_L1 = 1e3    
+    penalty_L2 = 1e4   
     weights_costs = np.array([1, 1, 1, 1, 1])
 
     ocp.cost.Zl = penalty_L2 * weights_costs
@@ -202,20 +203,18 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
   #  # --- Fine parte visuale --- 
 
-############ GESTIRE RPY VS CENTRO IMMAGINE
-######## POI GESTIRE INPUT UMANO IN MODO CHE IL DRONE TENGA INQUADRATO L'OGGETTO ANCHE CON CAMBIO RIFERIMENTO DI POSIZIONE UMANO
     '''
                                         COST FUNCTION               
     '''
     # --- COST EXPRESSION ---
     # Cost function quantities (expressed with respect to state and control)
     y_expr = ca.vertcat(
-        p_cam_expr,                     # Posizione attuale della camera (X,Y,Z)
-        Y_c,
+        p_cam_expr,                     # Posizione attuale della camera (X,Y)
+        Y_c,                            # Posizione Y dell'oggetto rispetto alla camera
         Z_c,
         v_expr,                         # velocity
-        rp_expr,                         # Orientamento attuale (w,x,y,z)
-        dot_rpy,                        # Euler rates
+        rp_expr,                         # Roll e pitch (non è vero, ora sono qx,qy)
+        dot_rpy,                        # Euler rates (non è vero, ora sono velocità angolari)
         acc_expr,                       # acceleration
         acc_ang_expr,                   # angular acceleration
         j_expr,                         # jerk
@@ -225,7 +224,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     
     # Terminal cost exrpession
     y_expr_e = ca.vertcat(
-        p_cam_expr,                     # Posizione attuale (X,Y,Z)
+        p_cam_expr,                     # Posizione attuale (X,Y)
         Y_c,
         Z_c,
         v_expr,                         # velocity
@@ -247,7 +246,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     ocp.cost.set = True
     
     # I parametri ora passati al modello (p) sono solo informativi per chi chiama get, non servono più a y_expr
-    ocp.parameter_values = np.concatenate([p_obj[0,:],rpy_obj[0,:], np.zeros(3)])  
+    ocp.parameter_values = p_obj[0,:] 
 
     '''
                                         REFERENCES
@@ -262,11 +261,11 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     acc_ang_ref = np.array([0,0,0])
     jerk_ref=np.array([0,0,0])
     snap_ref=np.array([0,0,0])
-    u_ref=np.zeros(nu)
+    u_ref=np.array(u_hovering.full().flatten())
 
 
     # Indexes (Aggiornati per le nuove dimensioni: pos=3, quat=4)
-    pos_ind = slice(0,3)
+    pos_ind = slice(0,2) # x e y della camera
     visual_ind = slice(pos_ind.stop,pos_ind.stop+2)
     vel_ind = slice(visual_ind.stop,visual_ind.stop+3)
     rp_ind = slice(vel_ind.stop, vel_ind.stop+2)
@@ -297,7 +296,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     yref_e = np.zeros(y_expr_e.numel())
 
     # ASSIGN REFERENCES (Dummy initial references, they will be overwritten online)
-    yref[pos_ind]= ref[0:3]         # Target assoluto X, Y, Z
+    yref[pos_ind]= ref[0:2]         # Target assoluto X, Y, Z
     yref[visual_ind]=visual_ref
     yref[vel_ind]=v_ref             
     yref[rp_ind]= rp_ref
@@ -308,11 +307,11 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     yref[snap_ind]=snap_ref         
     yref[u_ind]=u_ref               
 
-    new_ref = yref.copy()
-    new_ref[pos_ind]=final_ref[0:3]
+    #new_ref = yref.copy()
+    #new_ref[pos_ind]=final_ref[0:3]
     #new_ref[quat_ind]=final_ref[3:7]
 
-    yref_e = new_ref[:y_expr_e.numel()]  
+    yref_e = yref[:y_expr_e.numel()]  
 
     ocp.cost.yref = yref
     ocp.cost.yref_e = yref_e
@@ -321,6 +320,3 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     ocp_solver = AcadosOcpSolver(ocp)
 
     return ocp_solver, N_horiz, nx, nu, y_idx, ny, ny_e
-
-# Le funzioni extract_trajectory_from_solver e get_state_variables rimangono invariate per non rompere eventuale codice di plotting esterno, 
-# sebbene idx_j_start ecc andrebbero riadattati alla nuova lunghezza di y_expr per estrarre correttamente jerk e snap nei log.

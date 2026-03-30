@@ -15,25 +15,26 @@ fi
 IMAGE_NAME="$1"
 CONTAINER_NAME="${2:-Gaetano}"   # Se non viene passato, usa "Gaetano"
 
-# percorso root del progetto 
-HOST_PROJECT_ROOT="/home/${USER}/LAAS-quad-project"
+echo "[INFO] Ricerca di 'LAAS-quad-project' a partire da /home/${USER}..."
+# Cerca la cartella del progetto a partire dalla home dell'utente
+HOST_PROJECT_ROOT=$(find "/home/${USER}" -type d -name "LAAS-quad-project" -print -quit 2>/dev/null)
+
+if [ -z "$HOST_PROJECT_ROOT" ]; then
+    echo "[ERROR] Impossibile trovare la cartella 'LAAS-quad-project' in /home/${USER}."
+    exit 1
+else
+    echo "[INFO] Trovata root del progetto in: $HOST_PROJECT_ROOT"
+fi
 
 # cerca la prima cartella chiamata ros2_ws nel sottoalbero del progetto
-FOUND_ROS2_WS=$(find "$HOST_PROJECT_ROOT" -type d -name "ros2_ws" -print -quit)
-
-# se non la trovi nel progetto, prova a cercare in tutta la home (opzionale)
-if [ -z "$FOUND_ROS2_WS" ]; then
-    echo "ros2_ws non trovato sotto $HOST_PROJECT_ROOT — cerco in /home/${USER}..."
-    FOUND_ROS2_WS=$(find "/home/${USER}" -type d -name "ros2_ws" -print -quit)
-fi
+FOUND_ROS2_WS=$(find "$HOST_PROJECT_ROOT" -type d -name "ros2_ws" -print -quit 2>/dev/null)
 
 if [ -z "$FOUND_ROS2_WS" ]; then
-    echo "Errore: ros2_ws non trovato."
-    # gestisci l'errore come preferisci
+    echo "[ERROR] ros2_ws non trovato sotto $HOST_PROJECT_ROOT."
+    exit 1
 else
-    echo "Trovato ros2_ws in: $FOUND_ROS2_WS"
+    echo "[INFO] Trovato ros2_ws in: $FOUND_ROS2_WS"
 fi
-
 
 HOST_ROS2_WS_FOLDER="ros2_ws"
 HOST_ROS2_SRC_FOLDER="${HOST_ROS2_WS_FOLDER}/src"
@@ -42,9 +43,9 @@ HOST_ROS2_SRC_FOLDER="${HOST_ROS2_WS_FOLDER}/src"
 HOST_ROS2_WS_PATH="$FOUND_ROS2_WS"
 HOST_ROS2_SRC_PATH="${HOST_ROS2_WS_PATH}/src"
 
-HOST_PROJECT_PATH="/home/${USER}/LAAS-quad-project"
-HOST_OCP="${HOST_PROJECT_PATH}/OCP-MPC_Acados"
-echo "${HOST_OCP}"
+# Usa la root del progetto trovata dinamicamente per l'OCP
+HOST_OCP="${HOST_PROJECT_ROOT}/OCP-MPC_Acados"
+echo "[INFO] Percorso OCP sull'host: ${HOST_OCP}"
 
 # Percorso della simulazione fully ACADOS nel container
 CONTAINER_ACADOS_OCP_PATH="/home/user/OCP-MPC_Acados"
@@ -96,8 +97,9 @@ CONTAINER_ROS2_WORLDS="${CONTAINER_ROS2_SIM}/worlds"
 GZ_RESOURCE_PATH="${CONTAINER_ROS2_MODELS}:${CONTAINER_ROS2_WORLDS}:${CONTAINER_ROS2_WS_SRC}"
 GZ_PLUGIN_PATH="${CONTAINER_ROS2_WS_INSTALL}/mrsim_gazebo_sim/lib/mrsim_gazebo_sim"
 LIBRARY_PATH="${GZ_PLUGIN_PATH}"
-# Percorsi per la cache di Gazebo Fuel
-HOST_IGNITION_FUEL_PATH="/home/${USER}/LAAS-quad-project/.ignition"
+
+# Percorsi per la cache di Gazebo Fuel (aggiornato col path dinamico)
+HOST_IGNITION_FUEL_PATH="${HOST_PROJECT_ROOT}/.ignition"
 CONTAINER_IGNITION_FUEL_PATH="/home/user/.ignition"
 
 # Controlla se la cartella per Ignition Fuel sull'host esiste, altrimenti creala

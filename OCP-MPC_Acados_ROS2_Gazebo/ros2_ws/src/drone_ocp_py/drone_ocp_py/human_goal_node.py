@@ -30,16 +30,16 @@ class HumanGoalNode(Node):
         
         # Subscribers
         self.sub = self.create_subscription(Float64MultiArray, cmd_topic, self.cmd_cb, qos_in)
-        self.ref_sub = self.create_subscription(Float64MultiArray, '/online_ref', self.ref_cb, qos_in)
+        self.key_ref_sub = self.create_subscription(Float64MultiArray, '/online_ref', self.keyboard_ref_cb, qos_in)
         self.joy_sub = self.create_subscription(Joy, '/joy', self.joy_cb, qos_sensor)
 
-        # FIX 1: Inizializzato con coordinate di base invece di "None"
+        # FIX 1: Inizializzato con coordinate sferiche di base
         self.current_spherical_ref = [2.0, 0.0, 0.0]  
         self.joy_active = False
         self.axes = [0.0] * 8
 
         # Parametri Joystick
-        self.dt = 0.02
+        self.dt = 0.02   # 50 Hz
         self.v_pan_max = 0.5   
         self.v_tilt_max = 0.5  
         self.v_r_max = 1.0     
@@ -47,18 +47,18 @@ class HumanGoalNode(Node):
         self.timer = self.create_timer(self.dt, self.control_loop)
         self.get_logger().info(f"Human Goal Node attivo. In attesa di comandi joypad...")
 
-    def ref_cb(self, msg: Float64MultiArray):
+    def keyboard_ref_cb(self, msg: Float64MultiArray):
         if not self.joy_active and len(msg.data) >= 3:
             self.current_spherical_ref = [msg.data[0], msg.data[1], msg.data[2]]
 
     def joy_cb(self, msg: Joy):
         self.axes = msg.axes
         
-        # FIX 2: Ignoriamo i grilletti posteriori (L2/R2) che hanno valore di riposo 1.0
-        # Controlliamo solo gli assi che ci interessano (0, 1 e 4)
-        if len(self.axes) >= 5:
-            active_axes = [self.axes[0], self.axes[1], self.axes[4]]
-            self.joy_active = any(abs(a) > 0.05 for a in active_axes)
+        # Ignoriamo i cosi posteriori (L2/R2) che hanno valore di riposo 1.0 (bho la prima volta era così, la seconda no)
+        # Controlliamo solo gli assi che ci interessano (0, 1 e 3)
+        #if len(self.axes) >= 5:
+        active_axes = [self.axes[0], self.axes[1], self.axes[3]]
+        self.joy_active = any(abs(a) > 0.05 for a in active_axes)
 
     def cmd_cb(self, msg: Float64MultiArray):
         if len(msg.data) < 3:
@@ -75,7 +75,7 @@ class HumanGoalNode(Node):
 
         pan_cmd  = self.axes[0]
         tilt_cmd = self.axes[1]
-        r_cmd    = self.axes[4]
+        r_cmd    = self.axes[3]
 
         self.current_spherical_ref[1] += pan_cmd * self.v_pan_max * self.dt
         self.current_spherical_ref[2] += tilt_cmd * self.v_tilt_max * self.dt
@@ -96,7 +96,7 @@ class HumanGoalNode(Node):
 
     def publish_goal(self):
         msg = Float64MultiArray()
-        # Invia solo r, pan, tilt
+        # Invia r, pan, tilt
         msg.data = [
             float(self.current_spherical_ref[0]),
             float(self.current_spherical_ref[1]),

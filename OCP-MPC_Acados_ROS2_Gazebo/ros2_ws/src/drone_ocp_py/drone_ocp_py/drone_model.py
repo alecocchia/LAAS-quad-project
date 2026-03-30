@@ -76,7 +76,7 @@ def export_quadrotor_ode_model(m,Ixx,Iyy,Izz) -> AcadosModel:
     model.xdot = xdot
     model.u = u
     
-    ref_sym = ca.SX.sym('p', 9)  # simbolico per ref (p_obj,rpy_obj, mut_rpy_ref)
+    ref_sym = ca.SX.sym('p', 3)  # simbolico per ref (p_obj,rpy_obj, mut_rpy_ref) #  meglio solo posizione dell'oggetto
     model.p = ref_sym       #model.p = parameters 
 
     model.name = model_name
@@ -143,7 +143,7 @@ def convert_to_rpy_model(model_quat,m,Ixx,Iyy,Izz):
     model_rpy.xdot = xdot
     model_rpy.f_expl_expr = xdot
     model_rpy.name = model_quat.name + "_rpy"
-    ref_sym = ca.SX.sym('p', 9)  # simbolico per ref (p,rpy)
+    ref_sym = ca.SX.sym('p', 3)  # simbolico per ref (p,rpy)
     model_rpy.p = ref_sym       #model.p = parameters 
     model_rpy.m = m
     model_rpy.g = g0

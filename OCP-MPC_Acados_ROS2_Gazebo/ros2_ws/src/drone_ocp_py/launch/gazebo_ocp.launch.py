@@ -312,7 +312,7 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': True,
             'save_path': '/tmp/pid_run.npz',
-            'log_hz': 100.0,
+            'log_hz': 10.0,
             #'save_ref_flag': PythonExpression([planner_mode, ' != ', '2'])
             }],
     )
