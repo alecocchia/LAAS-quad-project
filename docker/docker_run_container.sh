@@ -54,7 +54,7 @@ CONTAINER_ROS2_WS_PATH="/home/user/${HOST_ROS2_WS_FOLDER}"
 CONTAINER_ROS2_SRC_PATH="$CONTAINER_ROS2_WS_PATH/src"
 
 # Percorsi per i file bag
-HOST_BAG_FILES_PATH="/home/$USER/bag_files"
+HOST_BAG_FILES_PATH="${HOST_PROJECT_ROOT}/bag_files"
 CONTAINER_BAG_FILES_PATH="/home/user/bag_files"
 
 # Controlla se la cartella di sviluppo sull'host esiste, altrimenti creala
