@@ -116,10 +116,31 @@ class MpcPlannerNode(Node):
 
         # === Riferimenti mutual iniziali (come OCP) ===
         radius = 2.0
-        mut_pos_ref = np.array([radius, 0.0, 0.0])   # [r, pan, tilt]
-        mut_rot_ref = np.array([0.0, 0.0, pi])     # rpy
-        mut_pos_final_ref = np.array([radius, 0, 0])
-        mut_rot_final_ref = np.array([0.0, 0.0, pi])
+        mut_pos_ref = np.array([radius, 0.0, 0.0])   # [r, pan, tilt] fase di inseguimento base
+        mut_rot_ref = np.array([0.0, 0.0, pi])       # rpy
+
+        # --- CALCOLO POSA TASK "HUMAN RIGHT HAND" ---
+        # Vettore base dall'oggetto (mano destra) agli occhi (testa)
+        # La testa è indietro (-X), a sinistra (+Y) e in alto (+Z) rispetto alla mano.
+        dx = -0.5
+        dy =  0.3
+        dz =  0.3
+        
+        # Fattore di scala (S) (se > 1 più lontano)
+        scale_factor = 3.0 
+        
+        dx_s = dx * scale_factor
+        dy_s = dy * scale_factor
+        dz_s = dz * scale_factor
+
+        # Conversione in coordinate sferiche per l'MPC
+        r_final = np.sqrt(dx_s**2 + dy_s**2 + dz_s**2)
+        pan_final = np.arctan2(dy_s, dx_s)
+        tilt_final = np.arcsin(dz_s / r_final)
+
+        #mut_pos_final_ref = np.array([r_final, pan_final, tilt_final])
+        mut_pos_final_ref = np.array([radius, 0.0, 0.0])
+        mut_rot_final_ref = np.array([0.0, 0.0, np.pi]) # non serve, se ne occupa il visual servoing
 
         self.ref = np.concatenate([mut_pos_ref, mut_rot_ref])
         self.final_ref = np.concatenate([mut_pos_final_ref, mut_rot_final_ref])
@@ -341,9 +362,9 @@ class MpcPlannerNode(Node):
         U_TAU_Z = 0.15     # Max coppia Yaw
 
         # obiettivo primario
-        PesoPos = 15.0
+        PesoPos = 10.0
         # obiettivo visivo
-        PesoVis = PesoPos 
+        PesoVis = PesoPos/1.5 
         #assetto
         PesoRot = PesoPos * 2.0
         
@@ -358,7 +379,7 @@ class MpcPlannerNode(Node):
         PesoTorque = PesoForce*2
 
         Q_pos = np.diag([PesoPos,PesoPos]) / [X**2, Y**2]
-        Q_visual = np.diag([PesoVis,PesoVis]) / VISUAL**2 # Y_c e Z_c
+        Q_visual = np.diag([PesoVis,PesoVis/2]) / VISUAL**2 # Y_c e Z_c
         Q_vel = np.diag([PesoVel, PesoVel, PesoVel]) / V**2
         Q_rot = np.diag([PesoRot, PesoRot]) / QUAT**2  
         
@@ -442,6 +463,7 @@ class MpcPlannerNode(Node):
         pan = online_ref[1]
         tilt = online_ref[2]
         
+        # passo in cooridnate cartesiane
         offset_x = r * np.cos(tilt) * np.cos(pan)
         offset_y = r * np.cos(tilt) * np.sin(pan)
         offset_z = r * np.sin(tilt)
@@ -476,7 +498,7 @@ class MpcPlannerNode(Node):
             #if np.dot(q_current, q_target) < 0:
             #    q_target = -q_target
             
-            # Conversione da coordinate sferiche (r, pan, tilt) a coordinate cartesiane assolute (X, Y, Z)
+            # Ricavo la posizione target del drone rispetto all'oggetto in coordinate cartesiane
             pos_target = np.array([
                 p_i[0] + offset_x,
                 p_i[1] + offset_y,
@@ -542,7 +564,7 @@ class MpcPlannerNode(Node):
         if not (self.mpc_ready and self.path_received):
             return
 
-        # Stato iniziale xk (da odom; vel e ang vel non osservate → 0)
+        # Stato iniziale xk (la velocità viene ruotata nel mondo qui, da odom viene ricavata in body)
         self.R = Rotation.from_euler('xyz',self.current_rpy).as_matrix()
         self.current_vel[:] = self.R @ self.current_raw_vel[:]
 
@@ -576,10 +598,11 @@ class MpcPlannerNode(Node):
         u0, x_seq = self.solve_MPC(xk,online_ref)
         t_end = time.perf_counter()
         
+        # misuro il tempo di risoluzione del problema 
         dt = t_end - t_start
         #print("tempo di chiamata control_step, iterazione ",self.k,": ", dt)
         
-        if dt > 1 * self.ts:  # >80% del budget (0.02 s)
+        if dt > 1 * self.ts:  # >100% del budget (0.02 s)
             self.get_logger().warn(f"MPC slow step (> 100% ts): {dt*1000:.1f} ms")
             self.last_u0 = u0.copy() if u0 is not None else None  # solo per analisi/plot
         #if x_seq is None:
