@@ -143,7 +143,7 @@ class MpcPlannerNode(Node):
         # === Stato corrente (per dynamic MPC/TF/visual) ===
         self.current_position = np.zeros(3)
         self.current_rpy = np.zeros(3)
-        self.current_quat = np.zeros(4)
+        self.current_quat = np.array([1.0, 0.0, 0.0, 0.0], dtype=float)
         self.current_raw_vel = np.zeros(3)
         self.current_vel = np.zeros(3)
         self.current_ang_vel = np.zeros(3)
@@ -341,29 +341,29 @@ class MpcPlannerNode(Node):
         U_TAU_Z = 0.15     # Max coppia Yaw
 
         # obiettivo primario
-        PesoPos = 10.0
+        PesoPos = 20.0
         # obiettivo visivo
-        PesoVis = PesoPos / 10 
+        PesoVis = PesoPos
         #assetto
-        PesoRot = PesoPos
+        PesoRot = PesoPos*2
         
-        PesoVel = PesoPos / 4.0
-        PesoAngVel = PesoRot / 2.0
-        PesoAcc = PesoVel /10
-        PesoAngAcc = PesoAngVel/10
-        PesoJerk = PesoAcc / 10
-        PesoSnap = PesoJerk / 10
+        PesoVel = PesoPos / 10.0
+        PesoAngVel = PesoRot / 10.0
+        PesoAcc = PesoVel/2
+        PesoAngAcc = PesoAngVel*5
+        PesoJerk = PesoAcc / 20
+        PesoSnap = PesoJerk 
 
         PesoForce = PesoPos / 100
-        PesoTorque = PesoForce*2
+        PesoTorque = PesoForce
 
         Q_pos = np.diag([PesoPos,PesoPos]) / [X**2, Y**2]
-        Q_visual = np.diag([PesoVis,PesoVis]) / VISUAL**2 # Y_c e Z_c
-        Q_vel = np.diag([PesoVel, PesoVel, PesoVel]) / V**2
+        Q_visual = np.diag([PesoVis,PesoVis*2]) / VISUAL**2 # Y_c e Z_c
+        Q_vel = np.diag([PesoVel, PesoVel, PesoVel*0.2]) / V**2
         Q_rot = np.diag([PesoRot, PesoRot]) / QUAT**2  
         
         Q_ang_dot = np.diag([PesoAngVel, PesoAngVel, PesoAngVel*0.5]) / ANG_DOT**2
-        Q_acc = np.diag([PesoAcc, PesoAcc, PesoAcc*0.5]) / ACC**2
+        Q_acc = np.diag([PesoAcc, PesoAcc, PesoAcc*0.2]) / ACC**2
         Q_acc_ang = np.diag([PesoAngAcc, PesoAngAcc, PesoAngAcc*0.5]) / ACC_ANG**2
         Q_jerk = np.diag([PesoJerk, PesoJerk, PesoJerk*0.5]) / JERK**2
         Q_snap = np.diag([PesoSnap, PesoSnap, PesoSnap*0.5]) / SNAP**2
@@ -545,7 +545,6 @@ class MpcPlannerNode(Node):
         # Stato iniziale xk (da odom; vel e ang vel non osservate → 0)
         self.R = Rotation.from_euler('xyz',self.current_rpy).as_matrix()
         self.current_vel[:] = self.R @ self.current_raw_vel[:]
-
         xk = np.array([
             self.current_position[0], self.current_position[1], self.current_position[2],
             self.current_vel[0], self.current_vel[1], self.current_vel[2],
@@ -573,13 +572,13 @@ class MpcPlannerNode(Node):
         t1 = self.get_clock().now().nanoseconds * 1e-9 # Aggiorno t1 per la logica di t_prev
 
         t_start = time.perf_counter()
-        u0, x_seq = self.solve_MPC(xk,online_ref)
+        u0, x_seq = self.solve_MPC(xk,online_ref) 
         t_end = time.perf_counter()
         
         dt = t_end - t_start
         #print("tempo di chiamata control_step, iterazione ",self.k,": ", dt)
         
-        if dt > 1 * self.ts:  # >80% del budget (0.02 s)
+        if dt > 1 * self.ts:  # >100% del budget (0.02 s)
             self.get_logger().warn(f"MPC slow step (> 100% ts): {dt*1000:.1f} ms")
             self.last_u0 = u0.copy() if u0 is not None else None  # solo per analisi/plot
         #if x_seq is None:

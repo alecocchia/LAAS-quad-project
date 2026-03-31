@@ -330,13 +330,13 @@ def generate_launch_description():
 
     # --- avvio sfalsato (WALL-CLOCK) ---
 #    peg_after        = TimerAction(period=1.5, actions=[peg_planner])
-#    mpc_after        = TimerAction(period=2.0, actions=[mpc_planner])     # se planner_mode==1
+    mpc_after        = TimerAction(period=2.0, actions=[mpc_planner])     # se planner_mode==1
 #    ocp_after        = TimerAction(period=2.0, actions=[ocp_planner])     # se planner_mode==2
 #    test_after       = TimerAction(period=2.0, actions=[planner_prova])   # se planner_mode==3
 #    loader_after     = TimerAction(period=2.0, actions=[ocp_loader])      # se planner_mode==4
 #    pid_after        = TimerAction(period=0.0, actions=[pid])             # se controller==1
 #    geometric_after  = TimerAction(period=2.5, actions=[geom_ctrl])       # se controller==2
-#    logger_after     = TimerAction(period=0.0, actions=[logger])
+    logger_after     = TimerAction(period=0.0, actions=[logger])
 #    rviz_after       = TimerAction(period=1.0, actions=[rviz])
 #    human_goal_after = TimerAction(period=2.1, actions=[human_goal_node])  # poco dopo mpc_after
 
@@ -350,7 +350,7 @@ def generate_launch_description():
         peg_planner,
 
         ocp_planner,
-        mpc_planner,
+        mpc_after,
         planner_prova,
         ocp_planner,
 

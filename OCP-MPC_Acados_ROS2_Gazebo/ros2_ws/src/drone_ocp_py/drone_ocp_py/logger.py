@@ -44,7 +44,7 @@ class Logger(Node):
 
         # --- parametri utente ---
         self.declare_parameter('save_path', '/tmp/pid_run.npz')
-        self.declare_parameter('log_hz', 100.0)
+        self.declare_parameter('log_hz', 200.0)
         self.declare_parameter('save_ref_flag',True)
 
         self.save_path = self.get_parameter('save_path').value

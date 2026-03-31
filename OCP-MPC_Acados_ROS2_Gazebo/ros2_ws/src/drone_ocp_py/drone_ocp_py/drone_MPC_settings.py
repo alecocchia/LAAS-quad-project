@@ -164,7 +164,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
 
     ocp.solver_options.integrator_type = 'ERK'
     ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-    #ocp.solver_options.qp_solver_cond_N = 5 # Scommentare per abilitare un condensing parziale per velocizzare ulteriormente (fake, non funziona)
+    ocp.solver_options.qp_solver_cond_N = 5 # Scommentare per abilitare un condensing parziale per velocizzare ulteriormente (fake, non funziona)
     ocp.solver_options.nlp_solver_type = 'SQP_RTI'
     #ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 

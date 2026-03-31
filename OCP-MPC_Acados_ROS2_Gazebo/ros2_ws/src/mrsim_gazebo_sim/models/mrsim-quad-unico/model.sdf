@@ -1,6 +1,7 @@
 <?xml version="1.0" ?>
 <sdf version="1.7">
   <model name="mrsim-quad-unico">
+    <pose>0.0 0.0 20.0 0.0 0.0 0.0</pose>
     <link name="base">
       <inertial>
         <mass>1.0</mass>
