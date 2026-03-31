@@ -86,8 +86,8 @@ class MpcPlannerNode(Node):
 
         # === Tempo/Orizzonte (coerenti con OCP) ===
         self.Tf = 20.0
-        num_campioni = 50
-        self.ts = 0.01  # MPC va a 1/0.02 = 50 Hz
+        num_campioni = 20
+        self.ts = 0.02  # MPC va a 1/0.02 = 50 Hz
         self.Tp = num_campioni*self.ts # tempo di predizione (finestra MPC)
         self.ts_peg = 0.005
         self.N_horiz = int(self.Tf / self.ts)
@@ -341,20 +341,20 @@ class MpcPlannerNode(Node):
         U_TAU_Z = 0.15     # Max coppia Yaw
 
         # obiettivo primario
-        PesoPos = 10.0
+        PesoPos = 15.0
         # obiettivo visivo
-        PesoVis = PesoPos / 10 
+        PesoVis = PesoPos 
         #assetto
-        PesoRot = PesoPos
+        PesoRot = PesoPos * 2.0
         
-        PesoVel = PesoPos / 4.0
+        PesoVel = PesoPos / 10.0
         PesoAngVel = PesoRot / 2.0
-        PesoAcc = PesoVel /10
-        PesoAngAcc = PesoAngVel/10
-        PesoJerk = PesoAcc / 10
-        PesoSnap = PesoJerk / 10
+        PesoAcc = PesoVel / 2.0
+        PesoAngAcc = PesoAngVel * 5.0
+        PesoJerk = PesoAcc / 20.0
+        PesoSnap = PesoJerk
 
-        PesoForce = PesoPos / 100
+        PesoForce = PesoPos / 1000
         PesoTorque = PesoForce*2
 
         Q_pos = np.diag([PesoPos,PesoPos]) / [X**2, Y**2]
