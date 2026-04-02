@@ -10,15 +10,15 @@ from scipy.spatial.transform import Rotation
 #################  AGGIUSTARE: ricavare snap, jerk, acc in qualche modo perché da y_expr non si può tramite get(...)
 ##############  Estendere lo stato con tutti gli stati
 
-def build_yref_online(y_idx, ref_vec):
+def build_yref_online(y_idx, pos_ref, visual_ref):
     yref = np.zeros(y_idx["u"].stop) 
     
-    # ref_vec ora contiene [X_target, Y_target, Z_target, qw, qx, qy, qz]
-    yref[y_idx["pos"]]     = ref_vec[0:2]          # Posizione Cartesiana X, Y
+    # xy_pos_ref ora contiene [X_target, Y_target, Z_target, qw, qx, qy, qz]
+    yref[y_idx["pos"]]     = pos_ref[0:2]          # Posizione Cartesiana X, Y
     yref[y_idx["vel"]]     = np.array([0,0,0])
-    #yref[y_idx["quat"]]    = ref_vec[3:7]          # Quaternione puro w, x, y, z
+    #yref[y_idx["quat"]]    = xy_pos_ref[3:7]          # Quaternione puro w, x, y, z
     yref[y_idx["rp"]]      = np.array([0,0])        # X_c, Y_c (posizione dell'oggetto rispetto alla camera, nella terna camera)
-    yref[y_idx["visual"]]  = np.array([0,0])
+    yref[y_idx["visual"]]  = visual_ref
     yref[y_idx["dot_rpy"]] = np.array([0,0,0])
     yref[y_idx["acc"]]     = np.array([0,0,0])
     yref[y_idx["acc_ang"]] = np.array([0,0,0])
@@ -27,8 +27,8 @@ def build_yref_online(y_idx, ref_vec):
     yref[y_idx["u"]]       = np.zeros(4)
     return yref
 
-def build_yref_terminal(y_idx, ref_vec, ny_e):
-    y = build_yref_online(y_idx, ref_vec)
+def build_yref_terminal(y_idx, pos_ref, visual_ref, ny_e):
+    y = build_yref_online(y_idx, pos_ref, visual_ref)
     return y[:ny_e]  
 
 
@@ -65,7 +65,7 @@ def set_initial_state(ocp_solver, xk):
     ocp_solver.set(0, "lbx", xk)
     ocp_solver.set(0, "ubx", xk)
 
-def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref = np.zeros(3)):
+def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, pos_ref = np.zeros(3),visual_ref = np.zeros(2)):
     
     nx = model.x.rows()
     nu = model.u.rows()
@@ -102,7 +102,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     # --- Parte visuale --> Sistema camera ---  
     d_cam = ca.DM(camera_offset[0:3]).reshape((3,1))
     p_cam = p_expr + R_expr @ d_cam   # Posizione della camera nel mondo
-    p_cam_expr = p_cam[0:2]
+    p_cam_expr = p_cam[0:2] # x ed y della camera nel mondo
 
     fov_h_rad = 80.0 * ca.pi / 180.0
     fov_v_rad = 60.0 * ca.pi / 180.0
@@ -252,8 +252,7 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
                                         REFERENCES
     '''
     
-    # Definition of constant references for derivatives
-    visual_ref = np.array([0,0])
+    # Definition of constant references
     rp_ref = np.array([0,0]) #roll and pitch refs
     dot_rpy_ref = np.array([0,0,0])
     v_ref=np.array([0,0,0])
@@ -295,13 +294,13 @@ def configure_mpc(model, x0, camera_offset, p_obj, rpy_obj, Tf, ts, W, W_e, ref 
     yref = np.zeros(y_expr.numel())
     yref_e = np.zeros(y_expr_e.numel())
 
-    # ASSIGN REFERENCES (Dummy initial references, they will be overwritten online)
-    yref[pos_ind]= ref[0:2]         # Target assoluto X, Y, Z
+    # ASSIGN REFERENCES
+    yref[pos_ind]= pos_ref[0:2]         # Target assoluto X, Y
     yref[visual_ind]=visual_ref
-    yref[vel_ind]=v_ref             
+    yref[vel_ind]=v_ref
     yref[rp_ind]= rp_ref
-    yref[dot_rpy_ind]=dot_rpy_ref   
-    yref[acc_ind]=acc_ref           
+    yref[dot_rpy_ind]=dot_rpy_ref
+    yref[acc_ind]=acc_ref
     yref[acc_ang_ind]=acc_ang_ref
     yref[jerk_ind]=jerk_ref         
     yref[snap_ind]=snap_ref         

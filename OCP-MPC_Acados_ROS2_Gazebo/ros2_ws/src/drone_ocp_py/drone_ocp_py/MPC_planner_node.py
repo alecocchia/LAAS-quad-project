@@ -118,33 +118,45 @@ class MpcPlannerNode(Node):
         radius = 2.0
         mut_pos_ref = np.array([radius, 0.0, 0.0])   # [r, pan, tilt] fase di inseguimento base
         mut_rot_ref = np.array([0.0, 0.0, pi])       # rpy
-
-        # --- CALCOLO POSA TASK "HUMAN RIGHT HAND" ---
-        # Vettore base dall'oggetto (mano destra) agli occhi (testa)
-        # La testa è indietro (-X), a sinistra (+Y) e in alto (+Z) rispetto alla mano.
-        dx = -0.5
-        dy =  0.3
-        dz =  0.3
         
-        # Fattore di scala (S) (se > 1 più lontano)
-        scale_factor = 3.0 
+        # --- CALCOLO POSA TASK "HUMAN RIGHT HAND" (Punto di vista Telecamera!) ---
+        # Immaginiamo la scena direttamente dagli "occhi" (Piano Immagine):
+        depth_cam = 1  # Profondità: quanto l'oggetto è lontano in avanti (Asse X camera)
+        right_cam = 0.3  # Orizzontale: quanto l'oggetto è spostato a DESTRA nello schermo
+        down_cam  = 0.2  # Verticale: quanto l'oggetto è in BASSO nello schermo
         
-        dx_s = dx * scale_factor
-        dy_s = dy * scale_factor
-        dz_s = dz * scale_factor
+        scale_factor = 1.0 
+        
+        # 1. RIFERIMENTI VISIVI PURI (Quello che vede il sensore)
+        # Nota: Y_c è negativo se l'oggetto è a destra, Z_c è negativo se è in basso
+        Y_c_target = -right_cam * scale_factor
+        Z_c_target = -down_cam * scale_factor
+        self.final_visual_ref = np.array([Y_c_target, Z_c_target])
 
-        # Conversione in coordinate sferiche per l'MPC
-        r_final = np.sqrt(dx_s**2 + dy_s**2 + dz_s**2)
-        pan_final = np.arctan2(dy_s, dx_s)
-        tilt_final = np.arcsin(dz_s / r_final)
+        # 2. TRASFORMAZIONE IN COORDINATE MONDO
+        X_c_target = depth_cam * scale_factor
+        
+        # Scegliamo da quale "lato" del mondo vogliamo inquadrarlo 
+        # (es. base_pan = 0.0 significa che il drone starà dietro l'oggetto lungo l'asse X del mondo)
+        base_pan = 0.0
+        
+        # Ruotiamo il vettore della telecamera nel mondo usando la matrice di rotazione Z(pan)
+        # Questo garantisce che la Posizione Assoluta (X,Y,Z) corrisponda ESATTAMENTE a ciò che la camera deve vedere
+        offset_x = X_c_target * np.cos(base_pan) - Y_c_target * np.sin(base_pan)
+        offset_y = X_c_target * np.sin(base_pan) + Y_c_target * np.cos(base_pan)
+        offset_z = Z_c_target # L'altezza non subisce la rotazione del pan
+        
+        # 3. CONVERSIONE IN COORDINATE SFERICHE (Per compatibilità con solve_MPC)
+        r_final = np.sqrt(offset_x**2 + offset_y**2 + offset_z**2)
+        pan_final = np.arctan2(offset_y, offset_x)
+        tilt_final = np.arcsin(offset_z / r_final)
 
-        #mut_pos_final_ref = np.array([r_final, pan_final, tilt_final])
-        mut_pos_final_ref = np.array([radius, 0.0, 0.0])
-        mut_rot_final_ref = np.array([0.0, 0.0, np.pi]) # non serve, se ne occupa il visual servoing
+        mut_pos_final_ref = np.array([r_final, pan_final, tilt_final])
+        mut_rot_final_ref = np.array([0.0, 0.0, np.pi]) # Irrilevante, guidato dalla vista
 
         self.ref = np.concatenate([mut_pos_ref, mut_rot_ref])
         self.final_ref = np.concatenate([mut_pos_final_ref, mut_rot_final_ref])
-        self.current_ref = self.ref.copy()  # aggiornabile via /human_goal
+        self.current_ref = self.ref.copy()
 
         # --- parametro: durata override umana (s) ---
         self.declare_parameter('human_hold_ref', 0.1)
@@ -194,7 +206,9 @@ class MpcPlannerNode(Node):
         self.single_twist_pub = self.create_publisher(TwistStamped, '/optimal_drone_twist', 1)
         self.single_wrench_pub = self.create_publisher(Wrench, wrench_topic_name, 1)
         self.tf_broadcaster   = tf2_ros.TransformBroadcaster(self)
-        self.ref_pub = self.create_publisher(Float64MultiArray, '/online_ref', 1)
+        self.ref_pub = self.create_publisher(Float64MultiArray, '/online_spherical_ref', 1)
+        self.visual_ref_pub = self.create_publisher(Float64MultiArray, '/online_visual_ref', 1)
+
 
         # === Trigger di start ( come nell’OCP) ===
         self.control_timer = None
@@ -325,7 +339,7 @@ class MpcPlannerNode(Node):
             pan = float(msg.data[1])
             tilt = float(msg.data[2])
             
-            # online_ref richiede 6 elementi: [r, pan, tilt, roll, pitch, yaw]
+            # online_spherical_ref richiede 6 elementi: [r, pan, tilt, roll, pitch, yaw]
             self.hgoal_ref = np.array([r, pan, tilt, 0.0, 0.0, 0.0], dtype=float)
 
             hold_human_ref = float(self.get_parameter('human_hold_ref').value)
@@ -364,14 +378,14 @@ class MpcPlannerNode(Node):
         # obiettivo primario
         PesoPos = 10.0
         # obiettivo visivo
-        PesoVis = PesoPos/1.5 
+        PesoVis = PesoPos * 1.5 
         #assetto
         PesoRot = PesoPos * 2.0
         
         PesoVel = PesoPos / 10.0
         PesoAngVel = PesoRot / 2.0
-        PesoAcc = PesoVel / 2.0
-        PesoAngAcc = PesoAngVel * 5.0
+        PesoAcc = PesoVel * 2.0
+        PesoAngAcc = PesoAngVel * 2.0
         PesoJerk = PesoAcc / 20.0
         PesoSnap = PesoJerk
 
@@ -379,13 +393,13 @@ class MpcPlannerNode(Node):
         PesoTorque = PesoForce*2
 
         Q_pos = np.diag([PesoPos,PesoPos]) / [X**2, Y**2]
-        Q_visual = np.diag([PesoVis,PesoVis/2]) / VISUAL**2 # Y_c e Z_c
+        Q_visual = np.diag([PesoVis,PesoVis]) / VISUAL**2 # Y_c e Z_c
         Q_vel = np.diag([PesoVel, PesoVel, PesoVel]) / V**2
         Q_rot = np.diag([PesoRot, PesoRot]) / QUAT**2  
         
-        Q_ang_dot = np.diag([PesoAngVel, PesoAngVel, PesoAngVel*0.5]) / ANG_DOT**2
+        Q_ang_dot = np.diag([PesoAngVel, PesoAngVel, PesoAngVel*0.2]) / ANG_DOT**2
         Q_acc = np.diag([PesoAcc, PesoAcc, PesoAcc*0.5]) / ACC**2
-        Q_acc_ang = np.diag([PesoAngAcc, PesoAngAcc, PesoAngAcc*0.5]) / ACC_ANG**2
+        Q_acc_ang = np.diag([PesoAngAcc, PesoAngAcc, PesoAngAcc*0.2]) / ACC_ANG**2
         Q_jerk = np.diag([PesoJerk, PesoJerk, PesoJerk*0.5]) / JERK**2
         Q_snap = np.diag([PesoSnap, PesoSnap, PesoSnap*0.5]) / SNAP**2
 
@@ -408,6 +422,7 @@ class MpcPlannerNode(Node):
             p_init[2] + r_init * np.sin(tilt_init)
         ])
         dummy_ref = dummy_pos
+        dummy_visual_ref = np.array([0,0])
 
         (self.ocp_solver,
          self.N_horiz, self.nx, self.nu,
@@ -421,7 +436,8 @@ class MpcPlannerNode(Node):
             ts=self.ts,
             W=W,
             W_e=W_e,
-            ref=dummy_ref
+            pos_ref=dummy_ref,
+            visual_ref = dummy_visual_ref
         )
 
         # warm-start iniziale
@@ -445,7 +461,7 @@ class MpcPlannerNode(Node):
         # Path predetto iniziale (da warm-start) per RViz
         self.publish_predicted_path_from_buffers()
 
-    def solve_MPC(self, xk, online_ref):
+    def solve_MPC(self, xk, online_spherical_ref, online_visual_ref):
         """
         Prepara parametri e yref sull'orizzonte e risolve l’MPC.
         Ritorna (u0, x_seq) con x_seq = [x0..xN].
@@ -456,12 +472,12 @@ class MpcPlannerNode(Node):
         M = len(self.p_obj)
 
         # --- PRE-CALCOLI FUORI DAL CICLO ---
-        #mut_rot_des = online_ref[3:6]
+        #mut_rot_des = online_spherical_ref[3:6]
         #R_mut_T = Rotation.from_euler('xyz', mut_rot_des).as_matrix().T
 
-        r = online_ref[0]
-        pan = online_ref[1]
-        tilt = online_ref[2]
+        r = online_spherical_ref[0]
+        pan = online_spherical_ref[1]
+        tilt = online_spherical_ref[2]
         
         # passo in cooridnate cartesiane
         offset_x = r * np.cos(tilt) * np.cos(pan)
@@ -505,17 +521,18 @@ class MpcPlannerNode(Node):
                 p_i[2] + offset_z
             ])
             
-            ref_vec = pos_target
+            ref_pos = pos_target
+            visual_ref = online_visual_ref
 
             param = p_i     #pos dell'oggetto all'istante i  
             self.ocp_solver.set(i, "p", param)
             
             if i < self.N_horiz:
-                yref_i = build_yref_online(self.y_idx, ref_vec)
+                yref_i = build_yref_online(self.y_idx, ref_pos, visual_ref)
                 self.ocp_solver.set(i, "yref", yref_i)
             elif i == self.N_horiz:
                 # terminal
-                yref_e = build_yref_online(self.y_idx, ref_vec)[:self.ny_e]
+                yref_e = build_yref_online(self.y_idx, ref_pos, visual_ref)[:self.ny_e]
                 self.ocp_solver.set(self.N_horiz, "yref", yref_e)
 
         # warm-start
@@ -578,24 +595,31 @@ class MpcPlannerNode(Node):
         # --- scelta del riferimento online ---
         now = self.get_clock().now()
         if self.hgoal_ref is not None and self.hgoal_until is not None and now < self.hgoal_until:  # Fase di input dinamico dell'uomo
-            online_ref = self.hgoal_ref
+            online_spherical_ref = self.hgoal_ref
+            online_visual_ref = np.array([0,0])
         else:
             if self.is_peg_finished is True:
-                online_ref = self.final_ref # Fase 2: il peg è fermo in posizione finale --> fase di task
+                online_spherical_ref = self.final_ref # Fase 2: il peg è fermo in posizione finale --> fase di task
+                online_visual_ref = self.final_visual_ref
             else:
-                online_ref = self.base_ref  # Fase 1: il peg si sta muovendo ed il task ancora deve cominciare
+                online_spherical_ref = self.base_ref  # Fase 1: il peg si sta muovendo ed il task ancora deve cominciare
+                online_visual_ref = np.array([0,0])
+
         
         # --- PUBBLICAZIONE RIFERIMENTO ONLINE PER IL LOGGER ---
         ref_msg = Float64MultiArray()
-        ref_msg.data = [float(x) for x in online_ref]
+        ref_msg.data = [float(x) for x in online_spherical_ref]
+        visual_ref_msg = Float64MultiArray()
+        visual_ref_msg.data = [float(x) for x in online_visual_ref]
         self.ref_pub.publish(ref_msg)
+        self.visual_ref_pub.publish(visual_ref_msg)
 
 
         # Risoluzione MPC (planner)
         t1 = self.get_clock().now().nanoseconds * 1e-9 # Aggiorno t1 per la logica di t_prev
 
         t_start = time.perf_counter()
-        u0, x_seq = self.solve_MPC(xk,online_ref)
+        u0, x_seq = self.solve_MPC(xk,online_spherical_ref, online_visual_ref)
         t_end = time.perf_counter()
         
         # misuro il tempo di risoluzione del problema 
