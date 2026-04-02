@@ -378,18 +378,18 @@ class MpcPlannerNode(Node):
         # obiettivo primario
         PesoPos = 10.0
         # obiettivo visivo
-        PesoVis = PesoPos * 1.5 
+        PesoVis = PesoPos / 10.0
         #assetto
-        PesoRot = PesoPos * 2.0
+        PesoRot = PesoPos
         
-        PesoVel = PesoPos / 10.0
+        PesoVel = PesoPos / 4.0
         PesoAngVel = PesoRot / 2.0
-        PesoAcc = PesoVel * 2.0
-        PesoAngAcc = PesoAngVel * 2.0
+        PesoAcc = PesoVel / 10.0
+        PesoAngAcc = PesoAngVel / 10.0
         PesoJerk = PesoAcc / 20.0
         PesoSnap = PesoJerk
 
-        PesoForce = PesoPos / 1000
+        PesoForce = PesoPos / 100
         PesoTorque = PesoForce*2
 
         Q_pos = np.diag([PesoPos,PesoPos]) / [X**2, Y**2]
