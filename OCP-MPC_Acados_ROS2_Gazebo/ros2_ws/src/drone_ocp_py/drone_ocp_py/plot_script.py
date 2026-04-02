@@ -193,6 +193,7 @@ def main():
 
     peg_pos = data['peg_pos'] if 'peg_pos' in data.files else np.empty((0,3))
     online_ref = data['online_ref'] if 'online_ref' in data.files else np.empty((0,6))
+    online_visual_ref = data['online_visual_ref'] if 'online_visual_ref' in data.files else np.empty((0,2))
 
     N = min([arr.shape[0] for arr in [t, pref, p, v, q, rpy, omega, peg_pos, online_ref] if arr.size > 0] + [t.shape[0]])
     t = t[:N]
@@ -209,6 +210,7 @@ def main():
     if wrench_ref.size: wrench_ref = wrench_ref[:N]
     if peg_pos.size: peg_pos = peg_pos[:N]
     if online_ref.size: online_ref = online_ref[:N]
+    if online_visual_ref.size: online_visual_ref = online_visual_ref[:N]
 
     # === LETTURA DINAMICA OFFSET DALL'SDF ===
     cam_offset = get_camera_offset_from_sdf(args.sdf)
@@ -321,12 +323,12 @@ def main():
             ncols=3, use_tex=args.tex
         )
         
+    print(online_visual_ref.shape)
     # --- 3. PLOT DEGLI ERRORI VISIVI (Y_c, Z_c) ---
     if Y_c.size and not np.isnan(Y_c).all():
-        zeros_ref = np.zeros_like(Y_c)  
         myPlotWithReference(
             t,
-            [np.column_stack((zeros_ref, zeros_ref))],  
+            [online_visual_ref],  
             np.column_stack((Y_c, Z_c)),                
             labels=[r"$Y_c\ [m]$", r"$Z_c\ [m]$"],
             title="Visual Servoing: Errore sul piano immagine (Y_c, Z_c)",

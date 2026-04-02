@@ -44,7 +44,7 @@ class Logger(Node):
 
         # --- parametri utente ---
         self.declare_parameter('save_path', '/tmp/pid_run.npz')
-        self.declare_parameter('log_hz', 200.0)
+        self.declare_parameter('log_hz', 100.0)
         self.declare_parameter('save_ref_flag',True)
 
         self.save_path = self.get_parameter('save_path').value
@@ -85,10 +85,13 @@ class Logger(Node):
         self.last_peg_pos = None
 
         self.online_ref = []
+        self.online_visual_ref = [] 
         self.last_online_ref = None
+        self.last_online_visual_ref = None
 
         self.create_subscription(PoseStamped, '/peg_pose', self.cb_peg_pose, 10)
         self.create_subscription(Float64MultiArray, '/online_ref', self.cb_online_ref, 10)
+        self.create_subscription(Float64MultiArray, '/online_visual_ref', self.cb_online_visual_ref, 10)
 
         # --- ultimo riferimento noto (latch) ---
         self.last_pref_pos  = None
@@ -204,6 +207,7 @@ class Logger(Node):
 
         self.peg_pos.append(self.last_peg_pos if self.last_peg_pos is not None else [np.nan]*3)
         self.online_ref.append(self.last_online_ref if self.last_online_ref is not None else [np.nan]*6)
+        self.online_visual_ref.append(self.last_online_visual_ref if self.last_online_visual_ref is not None else [np.nan]*2) 
 
         self.last_log_time = t_now
 
@@ -213,6 +217,9 @@ class Logger(Node):
     def cb_online_ref(self, msg: Float64MultiArray):
         self.last_online_ref = list(msg.data)    
 
+    def cb_online_visual_ref(self, msg: Float64MultiArray):
+        self.last_online_visual_ref = list(msg.data)   
+    
     def save(self):
         T = np.asarray(self.t)
         if T.size:
@@ -248,6 +255,7 @@ class Logger(Node):
             # peg e online ref
             peg_pos=np.asarray(self.peg_pos) if len(self.peg_pos) else np.empty((0,3)),
             online_ref=np.asarray(self.online_ref) if len(self.online_ref) else np.empty((0,6)),
+            online_visual_ref=np.asarray(self.online_visual_ref) if len(self.online_visual_ref) else np.empty((0,2)),
         )
 
         # --- PATCH: aggiunta 'pref' retro-compatibile (x,y,z,yaw) ---
