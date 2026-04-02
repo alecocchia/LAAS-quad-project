@@ -389,7 +389,7 @@ class MpcPlannerNode(Node):
         PesoJerk = PesoAcc / 20.0
         PesoSnap = PesoJerk
 
-        PesoForce = PesoPos / 100
+        PesoForce = PesoPos / 1000
         PesoTorque = PesoForce*2
 
         Q_pos = np.diag([PesoPos,PesoPos]) / [X**2, Y**2]
